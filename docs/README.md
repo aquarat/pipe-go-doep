@@ -7,6 +7,7 @@
 - [Rack visualisation](rack-visualisation.md)
 - [Oscilloscope](scope.md) and its [integration contract](scope-contract.md)
 - [Detachable pane windows](pane-windows.md)
+- [Rack module windows](module-windows.md) and their [integration contract](module-windows-contract.md)
 - [Interactive rack contract](interactive-workbench-contract.md)
 - [Browser Go/WebAssembly renderer](browser-renderer.md)
 - [Live transport integration contract](live-transport-contract.md)

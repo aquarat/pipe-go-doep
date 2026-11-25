@@ -191,3 +191,72 @@ test('rack edits and reconnections share one project across real pane windows', 
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+test('rack modules pop out with a stub, persist window layout and restore after reload', { timeout: 120000 }, async () => {
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
+  try {
+    const context = await browser.newContext({ viewport: { width: 1500, height: 1100 } });
+    // Behave like a real pop-up blocker: window.open needs a user gesture.
+    await context.addInitScript(() => {
+      const open = window.open;
+      window.open = function (...args) { return navigator.userActivation?.isActive ? open.apply(this, args) : null; };
+    });
+    const page = await context.newPage(), errors = [];
+    context.on('page', child => child.on('pageerror', error => errors.push(error.message)));
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(url);
+    await page.waitForFunction(() => document.querySelector('#title').textContent === 'Lantern Duel');
+    const project = async () => JSON.parse(await page.locator('#editor').inputValue());
+    const index = (await project()).nodes.findIndex(node => node.type === 'pulse');
+    const id = (await project()).nodes[index].id, key = `node:${index}`;
+    const pending = page.waitForEvent('popup');
+    await page.locator(`#rack-view .rack-module[data-node-key="${key}"] .rack-module-pop`).click();
+    const child = await pending; await child.waitForLoadState();
+    // A stub with the same jacks replaces the module; cables still end on it.
+    const stub = page.locator(`#rack-view .rack-module-stub[data-node-key="${key}"]`);
+    await stub.waitFor();
+    assert.ok(await stub.locator('.rack-jack').count() > 0);
+    assert.equal(await child.locator('.rack-module.is-window').count(), 1);
+
+    // Controls inside the module window still commit to the shared project.
+    const dial = child.locator('.rack-module.is-window [data-parameter="duty"]');
+    const before = (await project()).nodes[index].params.duty;
+    await dial.focus(); await child.keyboard.press('ArrowUp');
+    await page.waitForFunction(([i, b]) => JSON.parse(document.querySelector('#editor').value).nodes[i].params.duty !== b, [index, before]);
+
+    // Resizing the window is saved with the project's browser state.
+    await child.setViewportSize({ width: 520, height: 640 });
+    const saved = () => page.evaluate(() => {
+      const id = localStorage.getItem('pipe-go-doep.last-project.v2');
+      return JSON.parse(localStorage.getItem('pipe-go-doep.project.v2.' + id)).windows;
+    });
+    await page.waitForFunction(id => {
+      const p = localStorage.getItem('pipe-go-doep.last-project.v2');
+      return JSON.parse(localStorage.getItem('pipe-go-doep.project.v2.' + p)).windows?.modules?.[id]?.width === 520;
+    }, id);
+    assert.equal((await saved()).modules[id].height, 640);
+
+    // Reload: the blocked automatic reopen leaves a restore button; the stub
+    // is not shown until the window really reopens.
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('#title').textContent === 'Lantern Duel');
+    await page.locator('#restore-windows').waitFor();
+    assert.equal(await page.locator('#rack-view .rack-module-stub').count(), 0);
+    const reopened = page.waitForEvent('popup');
+    await page.locator('#restore-windows').click();
+    const again = await reopened; await again.waitForLoadState();
+    await stub.waitFor();
+    assert.equal(await page.locator('#restore-windows').isHidden(), true);
+    assert.equal(await again.evaluate(() => innerWidth), 520);
+
+    // Pop in from the stub closes the window and forgets it.
+    await stub.locator('.rack-stub-popin').click();
+    await page.waitForFunction(() => !document.querySelector('#rack-view .rack-module-stub'));
+    assert.equal(again.isClosed(), true);
+    await page.waitForFunction(id => {
+      const p = localStorage.getItem('pipe-go-doep.last-project.v2');
+      return !JSON.parse(localStorage.getItem('pipe-go-doep.project.v2.' + p)).windows?.modules?.[id];
+    }, id);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

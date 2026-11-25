@@ -93,10 +93,24 @@ one browser-draft writer, so edits immediately update the other views without
 competing full-project copies. JSON source edits, tree selection and audio controls
 retain their existing event handlers.
 
-Opening a different project or reloading/closing the main workbench returns the
-panes. Detached windows are session-local, not automatically reopened on refresh.
-Pane expansion/view preferences remain keyed by project UUID. If the browser blocks
-a popup, allow popups for this preview and use Pop out again.
+Individual rack modules, including the oscilloscope, can be popped out too: use
+the small **⧉** tab on the top edge of a faceplate. The module's full faceplate
+moves into its own resizable window and scales to fill it (the oscilloscope screen
+grows with the window). A compact stub with the same jacks stays in the rack, so
+cables, probe cables and repatching keep working there. Use **Pop in** in the
+window or on the stub, or close the window, to return the module; **Focus** on the
+stub raises its window. Module windows are always opened by the main workbench,
+even while the rack pane itself is popped out. The stereo output can't be popped
+out.
+
+Opening a different project returns its panes and modules. The workspace layout
+(which panes and modules are popped out, and each window's position and size) is
+saved per project in this browser, and reopened when the project is opened again
+or the page reloads. Browsers usually block pop-ups that don't come from a click:
+any windows that could not reopen are listed by **Restore windows** in the
+toolbar, which reopens one window per click. Windows for modules that no longer
+exist are forgotten. If the browser blocks a popup you asked for, allow popups for
+this site and try again.
 
 ## What is saved where?
 
@@ -105,6 +119,7 @@ a popup, allow popups for this preview and use Pop out again.
 | Music, graph, title, project UUID | Project JSON | Yes |
 | Expanded tree branches | `_ui.tree_expanded`, JSON Pointer strings | Yes |
 | Pane visibility | Browser storage keyed by UUID | No |
+| Popped-out panes/modules and window geometry | Browser storage keyed by UUID (`windows`) | No |
 | Score/rack view preferences | Browser storage keyed by UUID | No |
 | Transport source, scrub audition, loop range | Browser storage keyed by UUID | No |
 | Current project and pending source draft | Browser storage keyed by UUID | Only applied project |
@@ -157,8 +172,16 @@ node --test internal/workbench/live.browser.mjs
 
 It checks project isolation, immediate-reload pane persistence, JSON tree export,
 audio render/playback, stale-audio seek blocking, pending-source recovery, delayed
-project-load races, expansion limits and mobile overflow. See the score/rack
-visualisation references for component-level checks.
+project-load races, expansion limits, mobile overflow, and module pop-out windows
+with layout restore after reload. See the score/rack visualisation references for
+component-level checks.
+
+Component browser suites start their own Chromium and test server. Run them one
+file at a time; running all of them in parallel can stall:
+
+```sh
+node --test --test-concurrency=1 internal/workbench/static/*.browser.mjs
+```
 
 ## Oscilloscope
 

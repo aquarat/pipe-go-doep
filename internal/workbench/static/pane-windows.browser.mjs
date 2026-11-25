@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const files = new Map(await Promise.all(['pane-windows.js', 'pane-windows.css', 'score-view.js', 'score-view.css', 'rack-view.css', 'workbench.css'].map(async name => [name, await readFile(new URL(name, import.meta.url))])));
+const files = new Map(await Promise.all(['detached-window.js', 'pane-windows.js', 'pane-windows.css', 'score-view.js', 'score-view.css', 'rack-view.css', 'workbench.css'].map(async name => [name, await readFile(new URL(name, import.meta.url))])));
 const fixture = `<!doctype html><html lang="en"><head>
   <link rel="stylesheet" href="/workbench.css"><link rel="stylesheet" href="/score-view.css">
   <link rel="stylesheet" href="/rack-view.css"><link rel="stylesheet" href="/pane-windows.css"><link rel="stylesheet" href="/late.css">
@@ -25,6 +25,9 @@ function wav() {
   return buffer;
 }
 
+// A Pop in control closes its own window, which can race Playwright's action bookkeeping.
+const closing = action => action.catch(error => { if (!/closed/.test(error.message)) throw error; });
+
 async function setup(t) {
   let styleRequests = 0;
   const server = createServer((req, res) => {
@@ -38,7 +41,7 @@ async function setup(t) {
     else { res.setHeader('Content-Type', 'text/html'); res.end(fixture); }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  t.after(() => new Promise(resolve => server.close(resolve)));
+  t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH, args: ['--autoplay-policy=no-user-gesture-required'] });
   t.after(() => browser.close());
   const context = await browser.newContext({ viewport: { width: 1200, height: 900 } });
@@ -49,13 +52,18 @@ async function setup(t) {
     const { createPaneWindows } = await import('/pane-windows.js');
     const { createScoreView } = await import('/score-view.js');
     window.nodes = Object.fromEntries(['score', 'rack', 'edit', 'value', 'audio'].map(id => [id, document.getElementById(id)]));
-    window.changes = []; window.layouts = []; window.measurements = []; window.errors = []; window.edits = 0; window.reveals = [];
+    window.changes = []; window.layouts = []; window.measurements = []; window.errors = []; window.edits = 0; window.reveals = []; window.events = [];
     nodes.edit.addEventListener('click', () => window.edits++);
     window.score = createScoreView(nodes.score, { onReveal: path => reveals.push(path) });
     score.setProject({ bpm: 120, beats: 8, tracks: [{ id: 'lead', patterns: { p: [{ note: 'C4', beats: 1 }] }, order: ['p', 'p'] }] });
     window.panes = createPaneWindows({ panes: document.querySelectorAll('main > details'),
       onLayout: name => { layouts.push(name); if (name === 'score') score.refreshLayout(); if (name === 'rack') measurements.push(nodes.rack.querySelector('.late-marker').clientHeight); },
-      onChange: (name, detached) => changes.push([name, detached]), onError: message => errors.push(message),
+      onChange: (name, detached, geometry, reason) => {
+        events.push([name, detached, reason ?? null, geometry?.width > 0 && geometry?.height > 0]);
+        // Geometry updates while detached repeat `true`; record transitions only.
+        if (panes.isDetached(name) === detached && changes.findLast(([n]) => n === name)?.[1] !== detached) changes.push([name, detached]);
+      },
+      onError: message => errors.push(message),
     });
   });
   t.after(() => assert.deepEqual(errors, []));
@@ -84,7 +92,7 @@ test('actual nodes retain edits, native summary toggles, full rack height, and k
   assert.equal(await child.locator('.rack-viewport').evaluate(node => node.clientHeight), 2400);
   assert.equal(await child.locator('.pane-window-main').evaluate(node => node.scrollHeight > node.clientHeight), true);
   await page.waitForFunction(() => measurements.includes(73));
-  await child.getByRole('button', { name: 'Pop in Rack' }).press('Space');
+  await closing(child.getByRole('button', { name: 'Pop in Rack' }).press('Space'));
   await page.waitForFunction(() => nodes.rack.ownerDocument === document);
   assert.equal(await page.locator('#value').inputValue(), 'edited in child');
   assert.equal(await page.locator('[data-pane="rack"]').evaluate(node => node.open), false);
@@ -149,7 +157,7 @@ test('score uses child rAF, DPR, resize and controls, then rebinds to the parent
     opener.requestAnimationFrame = request;
   });
   assert.match(await child.locator('.sv-position').textContent(), /0:00.5/);
-  await child.getByRole('button', { name: 'Pop in Score', exact: true }).click();
+  await closing(child.getByRole('button', { name: 'Pop in Score', exact: true }).click());
   await page.waitForFunction(() => {
     const canvas = document.querySelector('.sv-ruler');
     return canvas && canvas.width === Math.ceil(parseFloat(canvas.style.width) * devicePixelRatio);
@@ -164,10 +172,50 @@ test('audio identity and active playback survive adoption; parent close docks an
   await child.waitForFunction(() => { const audio = document.querySelector('audio'); return !audio.paused && audio.currentTime >= 3; });
   assert.equal(await child.evaluate(() => document.querySelector('audio') === opener.nodes.audio), true);
   assert.equal(await child.locator('audio').evaluate(node => node.volume), .25);
-  await child.getByRole('button', { name: 'Pop in Monitor' }).click();
+  await closing(child.getByRole('button', { name: 'Pop in Monitor' }).click());
   await page.waitForFunction(() => nodes.audio.ownerDocument === document && !nodes.audio.paused && nodes.audio.currentTime >= 3);
   const rack = await pop(page, 'rack'); const score = await pop(page, 'score');
   const closed = Promise.all([rack.waitForEvent('close'), score.waitForEvent('close')]);
   await page.close({ runBeforeUnload: true });
   await closed;
+});
+
+test('popOut geometry, isDetached, geometry updates and close reasons', async t => {
+  const { page } = await setup(t);
+  await page.evaluate(() => {
+    window.features = [];
+    const open = window.open;
+    window.open = (...args) => { features.push(args[2]); return open.apply(window, args); };
+    document.querySelector('[data-pane="rack"] > summary h2').onclick = event => { event.preventDefault(); panes.popOut('rack', { left: 30, top: 40, width: 700, height: 500 }); };
+  });
+  const popup = page.waitForEvent('popup');
+  await page.locator('[data-pane="rack"] > summary h2').click();
+  const child = await popup;
+  await child.locator('.pane-window-content').waitFor();
+  assert.deepEqual(await page.evaluate(() => features), ['popup=yes,resizable=yes,scrollbars=yes,left=30,top=40,width=700,height=500']);
+  assert.deepEqual(await page.evaluate(() => [panes.isDetached('rack'), panes.isDetached('score'), panes.isDetached('missing')]), [true, false, false]);
+  await child.setViewportSize({ width: 650, height: 450 });
+  await page.waitForFunction(() => events.filter(([name, detached]) => name === 'rack' && detached).length >= 2);
+  await child.evaluate(() => window.close());
+  await page.waitForFunction(() => nodes.rack.ownerDocument === document);
+  assert.equal(await page.evaluate(() => panes.isDetached('rack')), false);
+  const events = await page.evaluate(() => events);
+  assert.deepEqual(events[0], ['rack', true, null, true]);
+  assert.deepEqual(events.at(-1), ['rack', false, 'user', true]);
+  await page.evaluate(() => panes.popOut('score'));
+  await page.evaluate(() => panes.dock('score'));
+  assert.deepEqual(await page.evaluate(() => events.at(-1)), ['score', false, 'api', true]);
+});
+
+test('parent navigation docks panes with reason opener', async t => {
+  const { page, context } = await setup(t);
+  await page.evaluate(() => { localStorage.clear(); const record = () => localStorage.setItem('events', JSON.stringify(events));
+    window.addEventListener('pagehide', record); });
+  const child = await pop(page, 'rack');
+  const closed = child.waitForEvent('close');
+  await page.goto(page.url() + '?next');
+  await closed;
+  const events = JSON.parse(await page.evaluate(() => localStorage.getItem('events')));
+  assert.deepEqual(events.at(-1), ['rack', false, 'opener', true]);
+  assert.equal(context.pages().length, 1);
 });

@@ -48,6 +48,10 @@ metadata and never change the sound.
 
 Each main pane has **Pop out / Pop in** controls. Detached panes remain connected
 to the same project; closing their window returns the content to the workbench.
+Single rack modules, including the oscilloscope, pop out into their own resizable
+windows with the **⧉** tab; a stub with the same jacks keeps their cables in the
+rack. The pop-out layout and window positions are saved per project and reopened
+on reload (a **Restore windows** button covers windows the browser blocks).
 Click a score event or rack module to inspect its source in the JSON tree.
 
 The **JSON pane is collapsed initially**, and its tree branches start collapsed.

@@ -9,9 +9,11 @@ const rack = createRackView(root, {
   onStateChange, onReveal, onEditParameter, onRevealParameter, onReconnect, onError,
   onPreviewParameter, onCancelParameter,
   scopeScreen, onProbe, // optional oscilloscope faceplate (see below)
+  onPopOutModule, onPopInModule, // optional module windows (see below)
 });
 rack.setProject(project, savedRackState);
-rack.refreshLayout(); // after expanding a hidden pane or adopting it into a popup
+rack.setDetached(new Map([['lead', hostElement], ['$scope', scopeHost]]));
+rack.refreshLayout(); // after expanding a hidden pane, adopting it into a popup, or a module window resize
 rack.destroy();
 ```
 
@@ -158,6 +160,53 @@ to unplug. The callback returns a boolean or promise (rejections reach
 `onError`). The component never mutates `project`; the coordinator updates
 `_ui.scope` and calls `setProject`. Probe cables are never `onReconnect` changes.
 
+## Module windows (pop-out)
+
+Integration contract: `docs/module-windows-contract.md`. The rack never opens
+windows itself; the coordinator does (normally with `module-windows.js`).
+
+- Every node faceplate whose id is unique (the first node with that id) and the
+  oscilloscope faceplate carry a small **⧉** tab on their top edge
+  (`.rack-module-pop`, labelled "Pop *id* out into its own window"). Its click
+  handler calls `onPopOutModule(id)` synchronously, so the coordinator can open a
+  window inside the user gesture. `id` is the node id, or `$scope` for the
+  oscilloscope. The stereo output faceplate cannot be popped out.
+- `setDetached(map)` takes a `Map<id, HTMLElement>` of open windows' host
+  elements and re-renders (cancelling any gesture). Unknown ids, non-elements and
+  hosts whose window has gone are ignored; before the first `setProject` the map
+  is only stored. A host no longer in the map (and rendered into before) is
+  emptied; `destroy()` empties every host.
+- For each detached module the rack renders a **stub** in the module's place
+  (`.rack-module.rack-module-stub[data-detached="true"]`, same `data-node-key`):
+  the module head (number/type, id, title; click selects and reveals as usual),
+  an **In window** badge, **Focus** (calls `onPopOutModule(id)` again; the
+  coordinator focuses the existing window) and **Pop in** (calls
+  `onPopInModule(id)`), and the module's jacks in a compact grid (values hidden).
+  Stubs are at least 7 HP; the oscilloscope stub is 12 HP with its five scope
+  jacks. All rack cables, probe cables, labels, selection, track/search
+  dimming, cable reconnection and probe patching use the stub jacks exactly as
+  they used the faceplate jacks.
+- The full faceplate is rendered into the host element, created in the host's
+  own document: `.rack-view.rack-module-window[data-node-key]` containing
+  `.rack-module.is-window`. Dials (drag preview/commit, keys, click reveal),
+  readouts, jack reveal and head selection work there: gestures use the event
+  target's own window for pointer capture, listeners and preview frames.
+  Window jacks select/reveal only; cables cannot be dragged across windows and
+  no cables are drawn in module windows. The window faceplate shows selection
+  but is never dimmed (its stub is). Escape in the window clears selection.
+- A popped faceplate fills its window: for each candidate column count (2 up to
+  the number of dials or jacks, at most 8) the dial grid and jack groups reflow
+  (`data-window-cols`), and the arrangement that scales up most is chosen; the
+  faceplate is then scaled (`data-window-scale`, 0.6-3) and centred. The host
+  should fill the window (e.g. `.module-window-host`, 100% height).
+- The oscilloscope window moves the `scopeScreen` element into
+  `.rack-scope-screen.scope-fill`; with `scope-view.css` the screen fills the
+  window's width and all spare height, above the scope controls and jacks.
+- Fitting is re-run, in the host window's animation frame, on `refreshLayout()`
+  (call it from the module window's `onLayout`, i.e. after resize and style
+  load) and on the host window's own `resize` event. The scope view re-measures
+  itself through its own `ResizeObserver`.
+
 ## Editing parameters and cables
 
 - Drag a dial vertically to preview locally. Up increases; down decreases. Shift
@@ -206,7 +255,9 @@ Useful integration selectors: `.rack-view`, `.rack-toolbar`, `.rack-viewport`,
 `.rack-module[data-node-key="node:0"]`, `[data-module-type="mixer"]`,
 `.rack-jack[data-direction="input"][data-port="gain"]`, `.rack-cable`,
 `.rack-cable.is-probe[data-channel="y1"]`, `.rack-cable-label`, `.rack-scope-screen`,
-`.rack-scope-jack[data-channel="x"]` and `.rack-family-output`. Controls have labels **Focus track**, **Find rack module**,
+`.rack-scope-jack[data-channel="x"]`, `.rack-family-output`, `.rack-module-pop`,
+`.rack-module-stub`, `.rack-stub-focus`, `.rack-stub-popin` and (in module
+windows) `.rack-module-window .rack-module.is-window`. Controls have labels **Focus track**, **Find rack module**,
 and **Rack zoom**. Project text uses DOM text APIs, never HTML interpolation.
 
 ## Verification
@@ -242,5 +293,11 @@ every cable, upright, fitted, staggered, pointer-transparent, selection and dim
 opacity), the scope faceplate (first, wider, the same screen element after
 rebuilds, XY annotation, dashed probe cables and exact endpoints, unresolved
 probes) and real pointer drags for probe patch, bus probe, repatch, unplug by
-empty drop/button/Delete and Escape.
+empty drop/button/Delete and Escape. Module window checks open real same-origin
+popups (copying the opener's stylesheets) and cover pop-out tabs, stubs (badge,
+jacks, no dials), cable and probe endpoints at stub jacks, dial drag/keys/reveal
+inside the popup committing through the rack callbacks with focus kept after a
+rebuild, selection/dimming, Focus and Pop in, ignored unknown ids, column
+reflow and scale-to-fit on window resize and `refreshLayout()`, and the
+oscilloscope screen moving to its window and growing with it.
 They load an isolated browser document and do not restart or modify the preview.

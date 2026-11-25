@@ -6,18 +6,25 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const model = Buffer.from(await readFile(new URL('./rack-model.js', import.meta.url), 'utf8')).toString('base64');
 const js = (await readFile(new URL('./rack-view.js', import.meta.url), 'utf8')).replace("'./rack-model.js'", `'data:text/javascript;base64,${model}'`);
 const css = await readFile(new URL('./rack-view.css', import.meta.url), 'utf8');
+const scopeJS = Buffer.from(await readFile(new URL('./scope-view.js', import.meta.url))).toString('base64');
+const scopeCSS = await readFile(new URL('./scope-view.css', import.meta.url), 'utf8');
 const fixture = name => readFile(new URL(`../../../examples/${name}.json`, import.meta.url), 'utf8').then(JSON.parse);
 
-async function setup(t, project, width = 1200, { scope = false } = {}) {
+async function setup(t, project, width = 1200, { scope = false, realScope = false } = {}) {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH }); t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width, height: 900 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.setContent('<style>body{margin:0;background:#10171b} main{width:100%;min-width:0}</style><main></main>');
   await page.addStyleTag({ content: css });
-  await page.evaluate(async ({ source, project, scope }) => {
+  if (realScope) await page.addStyleTag({ content: scopeCSS });
+  await page.evaluate(async ({ source, project, scope, realScope, scopeJS }) => {
     const { createRackView } = await import(`data:text/javascript;base64,${source}`);
-    window.probes = []; window.screenElement = null;
+    window.probes = []; window.screenElement = null; window.popOuts = []; window.popIns = [];
     if (scope) { window.screenElement = document.createElement('div'); window.screenElement.className = 'test-scope'; window.screenElement.append(document.createElement('canvas')); }
+    if (realScope) {
+      const { createScopeView } = await import(`data:text/javascript;base64,${scopeJS}`);
+      window.scopeView = createScopeView(window.screenElement, { getPosition: () => ({ frame: 0, sampleRate: 48000, playing: false, live: true }) });
+    }
     window.changes = []; window.reveals = []; window.edits = []; window.parameterReveals = []; window.reconnects = []; window.gestureErrors = [];
     window.accept = false; window.rebuild = false; window.capturedAtCommit = false;
     window.previews = []; window.cancels = []; window.parameterEvents = []; window.capturedAtCancel = false;
@@ -26,6 +33,8 @@ async function setup(t, project, width = 1200, { scope = false } = {}) {
     window.rack = createRackView(document.querySelector('main'), {
       ...(scope ? { scopeScreen: window.screenElement, onProbe: async x => { window.probes.push(x); if (window.rebuild) window.rack.setProject(window.project); return window.accept; } } : {}),
       onStateChange: x => window.changes.push(x), onReveal: x => window.reveals.push(x),
+      onPopOutModule: id => { window.popOuts.push(id); window.openModule?.(id); },
+      onPopInModule: id => { window.popIns.push(id); window.closeModule?.(id); },
       onRevealParameter: x => window.parameterReveals.push(x), onError: x => window.gestureErrors.push(x),
       onPreviewParameter: x => { window.previews.push(x); window.parameterEvents.push('preview'); },
       onCancelParameter: x => {
@@ -42,7 +51,7 @@ async function setup(t, project, width = 1200, { scope = false } = {}) {
     });
     window.rack.setProject(window.project);
     await new Promise(requestAnimationFrame);
-  }, { source: Buffer.from(js).toString('base64'), project, scope });
+  }, { source: Buffer.from(js).toString('base64'), project, scope, realScope, scopeJS });
   t.after(() => assert.deepEqual(errors, []));
   return page;
 }
@@ -452,4 +461,183 @@ test('probe gestures patch, repatch, unplug and cancel through onProbe only', as
   assert.equal(await page.locator('.rack-scope-jack.is-drop-target, .rack-jack.is-probe-target').count(), 0);
   await page.mouse.move(other.x + other.width / 2, other.y + other.height / 2, { steps: 6 }); await page.mouse.up();
   assert.deepEqual(await page.evaluate(() => window.reconnects), [{ outputChannel: 'left', end: 'from', ref: 'other.out' }]);
+});
+
+// Module windows: the test plays the coordinator, opening a same-origin popup per
+// module (synchronously, inside the click) and passing a full-window host element.
+async function withModuleWindows(page) {
+  await page.evaluate(() => {
+    window.moduleWindows = new Map();
+    const publish = () => window.rack.setDetached(new Map([...window.moduleWindows].map(([id, w]) => [id, w.host])));
+    window.openModule = id => {
+      const existing = window.moduleWindows.get(id);
+      if (existing) { existing.child.focus(); window.focused = (window.focused || 0) + 1; return; }
+      const child = window.open('', `module-${id}`);
+      // Copy the opener's stylesheets (popups opened with '' have none).
+      for (const style of document.head.querySelectorAll('style, link[rel="stylesheet"]')) child.document.head.append(child.document.importNode(style, true));
+      child.document.body.style.margin = '0';
+      const host = child.document.createElement('div'); host.className = 'module-window-host'; host.style.cssText = 'width:100vw;height:100vh';
+      child.document.body.append(host);
+      window.moduleWindows.set(id, { child, host }); publish();
+    };
+    window.closeModule = id => { const entry = window.moduleWindows.get(id); window.moduleWindows.delete(id); publish(); entry?.child.close(); };
+  });
+}
+async function popOut(page, selector) {
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator(selector).click();
+  const popup = await popupPromise; await popup.waitForLoadState();
+  await popup.evaluate(() => new Promise(requestAnimationFrame));
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  return popup;
+}
+const ringCentre = (page, selector) => page.evaluate(selector => {
+  const canvas = document.querySelector('.rack-canvas'), o = canvas.getBoundingClientRect(), s = o.width / canvas.offsetWidth, r = document.querySelector(selector).getBoundingClientRect();
+  return [(r.left + r.width / 2 - o.left) / s, (r.top + r.height / 2 - o.top) / s];
+}, selector);
+
+test('popped-out module: rack stub keeps cables, window faceplate edits, focus and pop in', async t => {
+  const page = await setup(t, smallPatch);
+  await withModuleWindows(page);
+  // Every node module and nothing else has a pop-out control.
+  assert.equal(await page.locator('.rack-module-pop').count(), smallPatch.nodes.length);
+  assert.equal(await page.locator('.rack-family-output .rack-module-pop').count(), 0);
+  const popup = await popOut(page, '.rack-module[data-node-key="node:0"] .rack-module-pop');
+  assert.deepEqual(await page.evaluate(() => window.popOuts), ['osc']);
+  const stub = page.locator('.rack-module-stub[data-node-key="node:0"]');
+  assert.equal(await stub.count(), 1);
+  assert.match(await stub.textContent(), /osc/); assert.match(await stub.textContent(), /sine/); assert.match(await stub.textContent(), /In window/);
+  assert.equal(await stub.locator('.rack-param').count(), 0);
+  assert.equal(await stub.locator('.rack-module-pop').count(), 0);
+  assert.deepEqual(await stub.locator('.rack-jack').evaluateAll(j => j.map(x => `${x.dataset.direction}.${x.dataset.port}`)), ['input.freq', 'input.reset', 'output.out']);
+  // Cables attach to the stub's jacks exactly.
+  assert.equal(await endpointsInRings(page), true);
+  const wire = (await page.locator('.rack-cable-wire').first().getAttribute('d')).split(' ').map(Number);
+  const out = await ringCentre(page, '.rack-module-stub[data-node-key="node:0"] [data-direction="output"] .rack-jack-ring');
+  assert.ok(Math.hypot(wire[1] - out[0], wire[2] - out[1]) < .5, JSON.stringify({ wire, out }));
+  // The full faceplate lives in the window's document, with no cables there.
+  if (process.env.RACK_SCREENSHOT_DIR) { await page.screenshot({ path: `${process.env.RACK_SCREENSHOT_DIR}/stub-rack.png` }); await popup.screenshot({ path: `${process.env.RACK_SCREENSHOT_DIR}/module-window.png` }); }
+  const faceplate = popup.locator('.rack-module-window .rack-module.is-window[data-node-key="node:0"]');
+  assert.equal(await faceplate.count(), 1);
+  assert.equal(await popup.locator('.rack-cable').count(), 0);
+  assert.equal(await faceplate.evaluate(el => el.ownerDocument === document && el.ownerDocument !== window.opener.document), true);
+  // A dial drag in the window previews and commits through the rack callbacks.
+  const freq = faceplate.locator('[data-parameter="freq"]');
+  await drag(popup, freq, 0, -30);
+  assert.equal(await page.evaluate(() => window.edits.length), 1);
+  assert.deepEqual(await page.evaluate(() => [window.edits[0].nodeIndex, window.edits[0].name, window.edits[0].value > 440]), [0, 'freq', true]);
+  assert.ok(await page.evaluate(() => window.previews.length > 0));
+  assert.equal(await page.evaluate(() => window.capturedAtCommit), false);
+  await freq.click(); assert.deepEqual(await page.evaluate(() => window.parameterReveals.at(-1)), { nodeIndex: 0, name: 'freq', value: 440 });
+  await freq.focus(); await popup.keyboard.press('ArrowUp');
+  assert.ok(await page.evaluate(() => window.edits.length === 2 && window.edits[1].value > 440));
+  // An accepted commit that rebuilds keeps the faceplate (and focus) in the window.
+  await page.evaluate(() => { window.accept = true; window.rebuild = true; });
+  await freq.focus(); await popup.keyboard.press('ArrowUp');
+  await popup.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await popup.evaluate(() => document.activeElement?.dataset.parameter), 'freq');
+  await page.evaluate(() => { window.rebuild = false; });
+  // Window jacks reveal; head selects; selection shows on stub and window, dimming only the stub.
+  await faceplate.locator('.rack-jack[data-port="reset"]').click();
+  assert.deepEqual(await page.evaluate(() => window.parameterReveals.at(-1)), { nodeIndex: 0, name: 'reset', value: 0 });
+  await faceplate.locator('.rack-module-head').click();
+  assert.equal(await stub.evaluate(el => el.classList.contains('is-selected')), true);
+  assert.equal(await faceplate.evaluate(el => el.classList.contains('is-selected')), true);
+  await page.getByLabel('Find rack module', { exact: true }).fill('amp');
+  assert.equal(await stub.evaluate(el => el.classList.contains('is-dimmed')), true);
+  assert.equal(await faceplate.evaluate(el => el.classList.contains('is-dimmed')), false);
+  await page.getByLabel('Find rack module', { exact: true }).fill('');
+  // Focus asks again (the coordinator focuses the window); the stub head selects in the rack.
+  await stub.getByRole('button', { name: 'Bring the osc window to the front' }).click();
+  assert.deepEqual(await page.evaluate(() => [window.popOuts, window.focused]), [['osc', 'osc'], 1]);
+  await stub.locator('.rack-module-head').click();
+  assert.equal(await page.evaluate(() => window.reveals.at(-1)), '/nodes/0');
+  // Unknown ids are ignored.
+  await page.evaluate(() => window.rack.setDetached(new Map([...window.moduleWindows].map(([id, w]) => [id, w.host]).concat([['missing', document.body]]))));
+  assert.equal(await page.locator('.rack-module-stub').count(), 1);
+  // Pop in from the stub: the faceplate returns to the rack and the window host is emptied.
+  const host = await popup.evaluateHandle(() => document.querySelector('.module-window-host'));
+  await stub.getByRole('button', { name: 'Pop osc back into the rack' }).click();
+  assert.deepEqual(await page.evaluate(() => window.popIns), ['osc']);
+  assert.equal(await page.locator('.rack-module-stub').count(), 0);
+  assert.equal(await page.locator('.rack-module[data-node-key="node:0"] [data-parameter="freq"]').count(), 1);
+  assert.equal(await page.locator('.rack-module[data-node-key="node:0"] .rack-module-pop').count(), 1);
+  assert.equal(await endpointsInRings(page), true);
+  assert.equal(await host.evaluate(el => el.childElementCount).catch(() => 0), 0);
+});
+
+test('popped faceplates reflow and scale to fill their window and follow resizes', async t => {
+  const page = await setup(t, smallPatch);
+  await withModuleWindows(page);
+  const popup = await popOut(page, '.rack-module[data-node-key="node:3"] .rack-module-pop');
+  const measure = () => popup.evaluate(async () => {
+    await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
+    const card = document.querySelector('.rack-module.is-window'), r = card.getBoundingClientRect();
+    return { scale: Number(card.dataset.windowScale), cols: Number(card.dataset.windowCols), left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: innerWidth, height: innerHeight };
+  });
+  await popup.setViewportSize({ width: 900, height: 500 });
+  const wide = await measure();
+  if (process.env.RACK_SCREENSHOT_DIR) await popup.screenshot({ path: `${process.env.RACK_SCREENSHOT_DIR}/mixer-window.png` });
+  assert.ok(wide.scale > 1.5, JSON.stringify(wide));
+  assert.ok(wide.left >= 0 && wide.top >= 0 && wide.right <= wide.width + 1 && wide.bottom <= wide.height + 1, JSON.stringify(wide));
+  assert.ok(Math.max(wide.right - wide.left, wide.bottom - wide.top) > Math.min(wide.width, wide.height) * .6, JSON.stringify(wide));
+  // A tall narrow window chooses fewer columns (reflow) and scales to fit.
+  await popup.setViewportSize({ width: 320, height: 900 });
+  const tall = await measure();
+  assert.ok(tall.cols < wide.cols, JSON.stringify({ wide, tall }));
+  assert.ok(tall.right <= tall.width + 1 && tall.bottom <= tall.height + 1 && tall.scale > 1, JSON.stringify(tall));
+  // refreshLayout (the coordinator's onLayout) re-fits as well.
+  await popup.evaluate(() => { document.querySelector('.module-window-host').style.height = '50vh'; });
+  await page.evaluate(() => window.rack.refreshLayout());
+  const half = await measure();
+  assert.ok(half.bottom <= half.height / 2 + 1 && half.scale < tall.scale, JSON.stringify(half));
+});
+
+test('popped-out oscilloscope: screen fills the window, stub jacks keep probe cables and patching', async t => {
+  const page = await setup(t, scopePatch, 1200, { scope: true, realScope: true });
+  await withModuleWindows(page);
+  const popup = await popOut(page, '.rack-module[data-node-key="$rack-scope"] .rack-module-pop');
+  assert.deepEqual(await page.evaluate(() => window.popOuts), ['$scope']);
+  const stub = page.locator('.rack-module-stub[data-node-key="$rack-scope"]');
+  assert.equal(await stub.count(), 1); assert.match(await stub.textContent(), /In window/);
+  assert.equal(await page.locator('.rack-module').first().getAttribute('data-node-key'), '$rack-scope');
+  assert.deepEqual(await stub.locator('.rack-scope-jack').evaluateAll(j => j.map(x => x.dataset.channel)), ['x', 'y1', 'y2', 'y3', 'y4']);
+  assert.equal(await page.evaluate(() => window.screenElement.ownerDocument !== document && !document.contains(window.screenElement)), true);
+  assert.equal(await popup.evaluate(() => document.querySelector('.rack-scope-screen.scope-fill > .scope-view') !== null), true);
+  assert.equal(await endpointsInRings(page), true);
+  const wire = (await page.locator('.rack-cable.is-probe[data-channel="y1"] .rack-cable-wire').getAttribute('d')).split(' ').map(Number);
+  const y1 = await ringCentre(page, '.rack-module-stub .rack-scope-jack[data-channel="y1"] .rack-jack-ring');
+  assert.ok(Math.hypot(wire.at(-2) - y1[0], wire.at(-1) - y1[1]) < .5);
+  const screen = () => popup.evaluate(async () => {
+    await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
+    const r = document.querySelector('.scope-screen').getBoundingClientRect(), canvas = document.querySelector('.scope-grid');
+    return { width: r.width, height: r.height, innerWidth, innerHeight, canvas: canvas.width, bottom: document.querySelector('.rack-module.is-window').getBoundingClientRect().bottom };
+  });
+  await popup.setViewportSize({ width: 700, height: 600 });
+  const small = await screen();
+  await popup.setViewportSize({ width: 1100, height: 900 });
+  const large = await screen();
+  if (process.env.RACK_SCREENSHOT_DIR) { await page.screenshot({ path: `${process.env.RACK_SCREENSHOT_DIR}/scope-stub.png` }); await popup.screenshot({ path: `${process.env.RACK_SCREENSHOT_DIR}/scope-window.png` }); }
+  for (const s of [small, large]) {
+    assert.ok(s.width > s.innerWidth - 60, JSON.stringify(s));
+    assert.ok(s.bottom <= s.innerHeight + 1, JSON.stringify(s));
+  }
+  assert.ok(large.height - small.height > 250, JSON.stringify({ small, large }));
+  assert.ok(large.canvas > small.canvas, 'the scope re-measures its canvas in the window');
+  // Probing from a stub jack still works.
+  const from = page.locator('.rack-module-stub .rack-scope-jack[data-channel="y2"]'), to = page.locator('.rack-module[data-node-key="node:2"] .rack-jack[data-direction="input"][data-port="gain"]');
+  await from.scrollIntoViewIfNeeded(); const a = await from.boundingBox(), b = await to.boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 }); await page.mouse.up();
+  assert.deepEqual(await page.evaluate(() => window.probes.at(-1)), { channel: 'y2', ref: { node: 'amp', port: 'gain', direction: 'input' } });
+  // Window scope jacks select probes but do not start drags.
+  await popup.locator('.rack-scope-jack[data-channel="y1"]').click();
+  assert.equal(await page.locator('.rack-cable.is-cable-selected').getAttribute('data-channel'), 'y1');
+  // Rebuilds keep the same screen element in the window; pop in returns it to the rack.
+  await page.evaluate(() => window.rack.setProject(window.project));
+  assert.equal(await popup.evaluate(() => document.querySelector('.rack-scope-screen > *') === window.opener.screenElement), true);
+  await stub.getByRole('button', { name: 'Pop oscilloscope back into the rack' }).click();
+  assert.deepEqual(await page.evaluate(() => window.popIns), ['$scope']);
+  assert.equal(await page.evaluate(() => document.querySelector('.rack-scope-screen > *') === window.screenElement), true);
+  await page.evaluate(() => window.rack.destroy());
 });

@@ -121,7 +121,10 @@ call `refresh()` (or wait for the next `push`) to restart drawing in the main
 window.
 
 The screen fills the element's width at a 5:4 aspect ratio.
-`--scope-screen-max-height` can cap its height. Controls wrap to fit a
+`--scope-screen-max-height` can cap its height. Inside a flex-column
+container with class `scope-fill` (the rack's popped-out oscilloscope window),
+the view grows to the container's height and the screen takes all spare height
+instead of keeping 5:4. Controls wrap to fit a
 ~420 px rack faceplate; above 640 px of container width, each channel's
 controls fit on a single row. Control styles are specific enough to override
 the generic `.rack-view button/select/input` rules.

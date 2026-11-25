@@ -5,7 +5,9 @@ const CHANNELS = ['x', 'y1', 'y2', 'y3', 'y4'];
 // Matches scope-view.js COLOURS.
 const CHANNEL_COLORS = { x: '#f2f5f0', y1: '#ffd84a', y2: '#45e0f0', y3: '#ff5ed6', y4: '#6ff27c' };
 // Eurorack-style widths: 1 HP is HP CSS pixels; cells are the jack/dial grid pitch.
-const HP = 15, CELL = 44, FRAME = 16, SCOPE_HP = 24;
+const HP = 15, CELL = 44, FRAME = 16, SCOPE_HP = 24, STUB_MIN_HP = 7, SCOPE_STUB_HP = 12;
+// Popped-out faceplates scale between these factors to fill their window.
+const MIN_WINDOW_SCALE = .6, MAX_WINDOW_SCALE = 3;
 const LABEL_MARGIN = 13, LABEL_STAGGER = [0.5, 0.24, 0.76, 0.37, 0.63];
 const JACK_ONLY = ['in', 'a', 'b', 'c', 'd', 'gate', 'trigger', 'reset'];
 let instances = 0;
@@ -77,22 +79,29 @@ export function arrangeModule(controls, inputs, outputs, extraRows = 0) {
 }
 
 /** Native patch rack. Gestures preview locally; the coordinator commits edits. */
-export function createRackView(root, { onStateChange = () => {}, onReveal = () => {}, onEditParameter = () => false, onPreviewParameter = () => {}, onCancelParameter = () => {}, onRevealParameter = () => {}, onReconnect = () => false, onProbe = () => false, onError = () => {}, scopeScreen = null } = {}) {
-  const doc = root.ownerDocument, instance = ++instances;
+export function createRackView(root, { onStateChange = () => {}, onReveal = () => {}, onEditParameter = () => false, onPreviewParameter = () => {}, onCancelParameter = () => {}, onRevealParameter = () => {}, onReconnect = () => false, onProbe = () => false, onError = () => {}, onPopOutModule = () => {}, onPopInModule = () => {}, scopeScreen = null } = {}) {
+  const instance = ++instances;
+  // Elements are created in the document they will live in: the rack's, or a module window's.
+  let buildDoc = null;
+  const docNow = () => buildDoc || root.ownerDocument;
   const hasScope = !!scopeScreen && typeof scopeScreen === 'object' && scopeScreen.nodeType === 1;
-  let project = {}, state = {}, nodes = [], edges = [], probes = [], scopeMode = 'yt', byID = new Map(), ownership = new Map();
+  let project = {}, state = {}, nodes = [], edges = [], probes = [], scopeMode = 'yt', byID = new Map(), ownership = new Map(), firstByID = new Map();
+  // detached: module id -> host element; windows: node key -> rendered window faceplate.
+  let detached = new Map(), windows = new Map(), renderedHosts = new Set(), hostCleanups = [], loaded = false;
+  const fits = new WeakMap(), fitted = new WeakMap(), pendingFits = new Map();
   let cards = new Map(), jacks = new Map(), cableElements = [], ghost = null, measure = null, widest = 0, frame = 0, scrollFrame = 0, destroyed = false, restoring = false;
   const disposers = [], textWidths = new Map();
   let gesture = null, selectedCable = null, revision = 0, cablePreview = null, observer = null, observedWindow = null;
   const currentWindow = () => root.ownerDocument.defaultView;
   const cancelFrame = value => { if (value) value.win.cancelAnimationFrame(value.id); };
-  function requestFrame(callback) { const win = currentWindow(); return { win, id: win.requestAnimationFrame(callback) }; }
+  function requestFrame(callback, win = currentWindow()) { return { win, id: win.requestAnimationFrame(callback) }; }
   function report(error) { onError(error instanceof Error ? error.message : String(error)); }
   function invoke(callback, value) { try { Promise.resolve(callback(value)).catch(report); } catch (error) { report(error); } }
   // Remove every capture/listener before callbacks: a commit may replace this DOM.
   function startGesture(event, target, move, finish) {
     if (event.button !== 0 || gesture || destroyed) return false;
-    const win = currentWindow(), pointer = event.pointerId;
+    // The target's own window: module faceplates may live in a pop-out window.
+    const win = target.ownerDocument.defaultView, pointer = event.pointerId;
     let done = false;
     const cleanup = () => {
       win.removeEventListener('pointermove', moving); win.removeEventListener('pointerup', up);
@@ -102,7 +111,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       gesture = null;
     };
     const end = (cancelled, e) => { if (done) return; done = true; cleanup(); finish(cancelled, e); };
-    const moving = e => { if (e.pointerId === pointer) { if (currentWindow() !== win) cancel(); else move(e); } };
+    const moving = e => { if (e.pointerId === pointer) { if (target.ownerDocument.defaultView !== win) cancel(); else move(e); } };
     const up = e => { if (e.pointerId === pointer) end(false, e); };
     const cancel = () => end(true);
     const pointerCancel = e => { if (e.pointerId === pointer) cancel(); };
@@ -114,12 +123,12 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     event.preventDefault(); return true;
   }
   function el(tag, cls, content) {
-    const result = doc.createElement(tag);
+    const result = docNow().createElement(tag);
     if (cls) result.className = cls;
     if (content !== undefined) result.textContent = content;
     return result;
   }
-  function svg(tag, cls) { const result = doc.createElementNS('http://www.w3.org/2000/svg', tag); if (cls) result.classList.add(cls); return result; }
+  function svg(tag, cls) { const result = docNow().createElementNS('http://www.w3.org/2000/svg', tag); if (cls) result.classList.add(cls); return result; }
   function listen(target, event, handler, options) {
     target.addEventListener(event, handler, options);
     disposers.push(() => target.removeEventListener(event, handler, options));
@@ -203,6 +212,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     byID = new Map(nodes.map(n => [n.key, n]));
     const ids = new Map();
     nodes.forEach(n => { if (!ids.has(n.id)) ids.set(n.id, n); });
+    firstByID = ids;
     const portNames = (node, direction) => node ? direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'] : [];
     function endpoint(ref, direction) {
       const parsed = split(ref), node = ids.get(parsed.id);
@@ -275,7 +285,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     };
     const commit = async previous => {
       if (value === previous) return;
-      const version = revision, edit = change(), hadFocus = root.ownerDocument.activeElement === param;
+      const version = revision, edit = change(), hadFocus = param.ownerDocument.activeElement === param;
       const rollback = () => {
         if (version === revision && !destroyed) paint(previous);
         invoke(onCancelParameter, { nodeIndex, name, value: previous });
@@ -285,9 +295,9 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       catch (error) { rollback(); report(error); }
       finally {
         pending = false; param.removeAttribute('aria-busy');
-        if (hadFocus && version !== revision && !destroyed && root.ownerDocument.activeElement === root.ownerDocument.body) {
-          const replacement = [...(cards.get(node.key)?.querySelectorAll('.rack-param') || [])].find(control => control.dataset.parameter === name);
-          replacement?.focus({ preventScroll: true });
+        if (hadFocus && version !== revision && !destroyed) {
+          const replacement = [...((windows.get(node.key) || cards.get(node.key))?.querySelectorAll('.rack-param') || [])].find(control => control.dataset.parameter === name);
+          if (replacement && replacement.ownerDocument.activeElement === replacement.ownerDocument.body) replacement.focus({ preventScroll: true });
         }
       }
     };
@@ -308,7 +318,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
           if (!previewFrame) previewFrame = requestFrame(() => {
             previewFrame = 0;
             if (!finished && !destroyed) invoke(onPreviewParameter, change());
-          });
+          }, param.ownerDocument.defaultView);
         };
         startGesture(event, param, move, (cancelled, e) => {
           if (!cancelled) move(e);
@@ -395,7 +405,9 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     })) cleanup();
   }
   function probesAt(key, direction, port) { return probes.filter(p => p.from.key === key && p.from.direction === direction && p.from.port === port); }
-  function makeJack(node, direction, port, valid = true) {
+  // `live` jacks are in the rack: they anchor cables and start cable/probe drags.
+  // Window faceplate jacks only select and reveal (cables cannot cross windows).
+  function makeJack(node, direction, port, valid = true, live = true) {
     const connected = edges.filter(e => (direction === 'input' ? e.to : e.from).key === node.key && (direction === 'input' ? e.to : e.from).port === port);
     const color = COLORS[signal(port, node.type)];
     const fallback = own(object(node.params), port) ? node.params[port] : node.spec.inputs[port];
@@ -406,9 +418,9 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       else select(node.key);
     };
     const dragEdge = () => connected.includes(selectedCable) ? selectedCable : connected.length === 1 ? connected[0] : null;
-    const b = button('', event => { if (event.detail && dragEdge() && node.key !== OUTPUT) return; reveal(); }, 'rack-jack');
+    const b = button('', event => { if (live && event.detail && dragEdge() && node.key !== OUTPUT) return; reveal(); }, 'rack-jack');
     b.style.setProperty('--signal', color); b.dataset.port = port; b.dataset.direction = direction; b.dataset.nodeKey = node.key;
-    b.addEventListener('pointerdown', event => {
+    if (live) b.addEventListener('pointerdown', event => {
       const edge = dragEdge();
       if (edge && !(edge.outputChannel && direction === 'input')) beginCable(event, b, edge, direction === 'input' ? 'to' : 'from', reveal);
     });
@@ -424,24 +436,41 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     const routes = [...connected.map(e => e.label), ...probed.map(p => `probed by scope ${p.probeChannel.toUpperCase()}`)];
     b.title = `${node.id || 'Stereo output'}.${port} · ${direction}${routes.length ? ` · ${routes.join('; ')}` : direction === 'input' && fallback !== undefined ? ` · default ${valueText(fallback)}` : ' · unconnected'}`;
     b.setAttribute('aria-label', b.title);
-    jacks.set(jackKey(node.key, direction, port), ring);
+    if (live) jacks.set(jackKey(node.key, direction, port), ring);
     return b;
   }
   function makeHead(node, onClick) {
     const head = button('', onClick, 'rack-module-head');
-    head.append(functionIcon(doc, node.type, node.spec.title), el('span', 'rack-module-number', node.key === OUTPUT ? 'STEREO / OUT' : node.key === SCOPE ? 'PROBE / MONITOR' : `${String(node.index + 1).padStart(2, '0')} / ${node.type || '?'}`), el('strong', '', node.id || 'Untitled module'), el('small', '', node.spec.title));
+    head.append(functionIcon(docNow(), node.type, node.spec.title), el('span', 'rack-module-number', node.key === OUTPUT ? 'STEREO / OUT' : node.key === SCOPE ? 'PROBE / MONITOR' : `${String(node.index + 1).padStart(2, '0')} / ${node.type || '?'}`), el('strong', '', node.id || 'Untitled module'), el('small', '', node.spec.title));
     return head;
   }
-  function makeShell(node, hp) {
+  // Pop-out id: node id (first node with that id only) or '$scope'; '' when not poppable.
+  function moduleID(node) {
+    if (node.key === SCOPE) return '$scope';
+    return node.key !== OUTPUT && node.id && firstByID.get(node.id) === node ? node.id : '';
+  }
+  function hostFor(node) {
+    const id = moduleID(node), host = id ? detached.get(id) : null;
+    return host?.nodeType === 1 && host.ownerDocument?.defaultView ? host : null;
+  }
+  function popOutButton(node) {
+    const id = moduleID(node), name = node.key === SCOPE ? 'oscilloscope' : node.id;
+    // Synchronous: the coordinator must open the window inside this click's user gesture.
+    const b = button('⧉', () => invoke(onPopOutModule, id), 'rack-module-pop');
+    b.title = `Pop ${name} out into its own window`; b.setAttribute('aria-label', b.title);
+    return b;
+  }
+  // mode: 'rack' (faceplate), 'stub' (popped-out stand-in) or 'window' (faceplate in its window).
+  function makeShell(node, hp, mode = 'rack') {
     const card = el('article', `rack-module rack-family-${node.spec.family}`); card.dataset.nodeKey = node.key; card.dataset.moduleType = node.type;
-    card.dataset.hp = hp; card.style.width = `${hp * HP}px`; widest = Math.max(widest, hp * HP);
-    cards.set(node.key, card);
+    card.dataset.hp = hp;
+    if (mode === 'window') { card.classList.add('is-window'); windows.set(node.key, card); }
+    else { card.style.width = `${hp * HP}px`; widest = Math.max(widest, hp * HP); cards.set(node.key, card); }
     for (let i = 0; i < 4; i++) card.append(el('i', `rack-screw rack-screw-${i}`));
+    if (mode === 'rack' && moduleID(node)) card.append(popOutButton(node));
     return card;
   }
-  function makeCard(node) {
-    const defaults = node.key === OUTPUT ? {} : { ...node.spec.inputs, ...node.spec.params }, actual = object(node.params);
-    const controls = [...new Set([...Object.keys(defaults), ...Object.keys(actual)])].filter(name => !JACK_ONLY.includes(name));
+  function modulePorts(node) {
     const ports = {};
     for (const direction of ['input', 'output']) {
       const standard = direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'];
@@ -449,13 +478,32 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       for (const edge of edges) { const endpoint = direction === 'input' ? edge.to : edge.from; if (endpoint.key === node.key && endpoint.port) names.add(endpoint.port); }
       ports[direction] = [...names].map(port => [port, standard.includes(port)]);
     }
-    const shape = arrangeModule(controls.length, ports.input.length, ports.output.length, node.type === 'sequence' ? 1 : 0);
-    const card = makeShell(node, shape.hp);
+    return ports;
+  }
+  function makePortPanel(node, ports, shape, live) {
+    const portPanel = el('div', 'rack-ports'), groups = {};
+    for (const direction of ['input', 'output']) {
+      if (!ports[direction].length) continue;
+      const group = el('div', `rack-port-group is-${direction}`); group.setAttribute('role', 'group'); group.setAttribute('aria-label', direction === 'input' ? 'Inputs' : 'Outputs');
+      const cols = direction === 'input' ? shape.inCols : shape.outCols;
+      group.style.setProperty('--n', cols); group.style.flexGrow = cols;
+      for (const [port, valid] of ports[direction]) group.append(makeJack(node, direction, port, valid, live));
+      portPanel.append(group); groups[direction] = group;
+    }
+    return { portPanel, groups };
+  }
+  // Balanced rows: four dials in three columns become 2 + 2 rather than 3 + 1.
+  const paramColumns = (count, cols) => Math.max(1, Math.ceil(count / Math.max(1, Math.ceil(count / cols))));
+  function makeCard(node, mode = 'rack') {
+    const defaults = node.key === OUTPUT ? {} : { ...node.spec.inputs, ...node.spec.params }, actual = object(node.params);
+    const controls = [...new Set([...Object.keys(defaults), ...Object.keys(actual)])].filter(name => !JACK_ONLY.includes(name));
+    const ports = modulePorts(node), extraRows = node.type === 'sequence' ? 1 : 0;
+    const shape = arrangeModule(controls.length, ports.input.length, ports.output.length, extraRows);
+    const card = makeShell(node, shape.hp, mode);
     card.style.setProperty('--cols', shape.cols);
     card.append(makeHead(node, () => select(node.key, true)));
     const params = el('div', 'rack-params');
-    // Balanced rows: four dials in three columns become 2 + 2 rather than 3 + 1.
-    params.style.setProperty('--param-cols', Math.max(1, Math.ceil(controls.length / Math.max(1, Math.ceil(controls.length / shape.cols)))));
+    params.style.setProperty('--param-cols', paramColumns(controls.length, shape.cols));
     if (node.type === 'sequence') {
       const display = el('div', 'rack-sequence-display');
       display.append(el('small', '', 'SCORE CONTROL'), el('strong', '', text(node.track) || 'No track assigned'));
@@ -474,44 +522,122 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     if (!params.childNodes.length) params.append(el('p', 'rack-note', 'Signal routing'));
     card.append(params);
     if (node.type === 'mixer') card.append(el('div', 'rack-sum-label', 'Σ OUT = A·gA + B·gB + C·gC + D·gD'));
-    const portPanel = el('div', 'rack-ports');
-    for (const direction of ['input', 'output']) {
-      if (!ports[direction].length) continue;
-      const group = el('div', `rack-port-group is-${direction}`); group.setAttribute('role', 'group'); group.setAttribute('aria-label', direction === 'input' ? 'Inputs' : 'Outputs');
-      const cols = direction === 'input' ? shape.inCols : shape.outCols;
-      group.style.setProperty('--n', cols); group.style.flexGrow = cols;
-      for (const [port, valid] of ports[direction]) group.append(makeJack(node, direction, port, valid));
-      portPanel.append(group);
-    }
+    const { portPanel, groups } = makePortPanel(node, ports, shape, mode === 'rack');
     card.append(portPanel);
+    if (mode === 'window') fits.set(card, { params, groups, controls: controls.length, inputs: ports.input.length, outputs: ports.output.length, extraRows });
     return card;
   }
-  function makeScopeCard() {
-    const node = { key: SCOPE, id: 'Oscilloscope', type: 'scope', spec: { title: 'Probe monitor · observes, never changes sound', family: 'scope' } };
-    const card = makeShell(node, SCOPE_HP);
-    card.append(makeHead(node, () => select(SCOPE)));
-    const screen = el('div', 'rack-scope-screen'); screen.append(scopeScreen); card.append(screen);
+  function makeScopeJacks(live) {
     const panel = el('div', 'rack-ports rack-scope-jacks'); panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', 'Oscilloscope inputs');
     for (const channel of CHANNELS) {
       const probe = probes.find(p => p.probeChannel === channel), name = channel.toUpperCase();
       const choose = () => { if (probe) selectCable(probe); else select(SCOPE); };
-      const b = button('', event => { if (!event.detail) choose(); }, 'rack-jack rack-scope-jack');
+      const b = button('', event => { if (!live || !event.detail) choose(); }, 'rack-jack rack-scope-jack');
       b.dataset.port = channel; b.dataset.direction = 'input'; b.dataset.nodeKey = SCOPE; b.dataset.channel = channel;
       b.style.setProperty('--signal', CHANNEL_COLORS[channel]);
       b.classList.toggle('is-connected', !!probe); b.classList.toggle('is-unresolved', !!probe && !probe.from.valid);
-      b.addEventListener('pointerdown', event => beginProbe(event, b, channel, choose));
+      if (live) b.addEventListener('pointerdown', event => beginProbe(event, b, channel, choose));
       const ring = el('span', 'rack-jack-ring'); ring.setAttribute('aria-hidden', 'true');
       const label = el('span', 'rack-jack-label', name);
       if (channel === 'x' && scopeMode === 'yt') label.append(el('small', 'rack-scope-note', 'XY mode'));
       label.append(el('small', 'rack-jack-value', probe ? probe.from.valid ? endCaption(probe.from, false) : 'unresolved' : '—'));
       b.append(ring, label);
-      b.title = `Oscilloscope ${name}${channel === 'x' && scopeMode === 'yt' ? ' (used in XY mode)' : ''} · ${probe ? probe.caption + (probe.from.valid ? '' : ' (unresolved)') : 'unplugged; drag onto any module or output jack to probe'}`;
+      b.title = `Oscilloscope ${name}${channel === 'x' && scopeMode === 'yt' ? ' (used in XY mode)' : ''} · ${probe ? probe.caption + (probe.from.valid ? '' : ' (unresolved)') : live ? 'unplugged; drag onto any module or output jack to probe' : 'unplugged; patch from the rack'}`;
       b.setAttribute('aria-label', b.title);
-      jacks.set(jackKey(SCOPE, 'input', channel), ring);
+      if (live) jacks.set(jackKey(SCOPE, 'input', channel), ring);
       panel.append(b);
     }
-    card.append(panel);
+    return panel;
+  }
+  const scopeNode = () => ({ key: SCOPE, id: 'Oscilloscope', type: 'scope', spec: { title: 'Probe monitor · observes, never changes sound', family: 'scope' } });
+  function makeScopeCard(mode = 'rack') {
+    const node = scopeNode();
+    const card = makeShell(node, SCOPE_HP, mode);
+    card.append(makeHead(node, () => select(SCOPE)));
+    // In a window the scope screen fills the remaining height (scope-view.css fill mode).
+    const screen = el('div', `rack-scope-screen${mode === 'window' ? ' scope-fill' : ''}`); screen.append(scopeScreen); card.append(screen);
+    card.append(makeScopeJacks(mode === 'rack'));
     return card;
+  }
+  // Stands in for a popped-out module: same live jacks, so cables and probes attach here.
+  function makeStub(node) {
+    const id = moduleID(node), scope = node.key === SCOPE, name = scope ? 'oscilloscope' : node.id;
+    const ports = scope ? null : modulePorts(node);
+    const shape = scope ? null : arrangeModule(0, ports.input.length, ports.output.length);
+    const card = makeShell(node, scope ? SCOPE_STUB_HP : Math.max(STUB_MIN_HP, shape.hp), 'stub');
+    card.classList.add('rack-module-stub'); card.dataset.detached = 'true';
+    card.append(makeHead(node, () => scope ? select(SCOPE) : select(node.key, true)));
+    const panel = el('div', 'rack-stub-panel');
+    const badge = el('span', 'rack-stub-badge', 'In window'); badge.setAttribute('role', 'status');
+    const focus = button('Focus', () => invoke(onPopOutModule, id), 'rack-stub-focus');
+    focus.title = `Bring the ${name} window to the front`; focus.setAttribute('aria-label', focus.title);
+    const popIn = button('Pop in', () => invoke(onPopInModule, id), 'rack-stub-popin');
+    popIn.title = `Pop ${name} back into the rack`; popIn.setAttribute('aria-label', popIn.title);
+    const actions = el('div', 'rack-stub-actions'); actions.append(focus, popIn);
+    panel.append(badge, actions); card.append(panel);
+    card.append(scope ? makeScopeJacks(true) : makePortPanel(node, ports, shape, true).portPanel);
+    return card;
+  }
+  // Renders a popped-out faceplate into its window's host element, in that document.
+  function renderWindow(node, host) {
+    const previous = buildDoc; buildDoc = host.ownerDocument;
+    try {
+      const wrapper = el('div', 'rack-view rack-module-window'); wrapper.dataset.nodeKey = node.key;
+      wrapper.addEventListener('keydown', event => { if (event.key === 'Escape' && !gesture) select(''); });
+      const card = node.key === SCOPE ? makeScopeCard('window') : makeCard(node, 'window');
+      if (node.key === SCOPE) { wrapper.classList.add('is-scope'); wrapper.append(card); }
+      else { const sizer = el('div', 'rack-module-window-sizer'); sizer.append(card); wrapper.append(sizer); }
+      host.replaceChildren(wrapper); renderedHosts.add(host); fitted.delete(host);
+      const win = host.ownerDocument.defaultView, onResize = () => refreshLayout();
+      win.addEventListener('resize', onResize);
+      hostCleanups.push(() => win.removeEventListener('resize', onResize));
+    } finally { buildDoc = previous; }
+  }
+  // Pick the dial/jack column count that lets the faceplate scale up most in its window.
+  function fitWindow(host) {
+    const wrapper = host.firstElementChild, sizer = wrapper?.firstElementChild, card = sizer?.firstElementChild, fit = card && fits.get(card);
+    const win = host.ownerDocument.defaultView;
+    if (!fit || !win || !wrapper.isConnected) return;
+    const style = win.getComputedStyle(wrapper);
+    const availableWidth = wrapper.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const availableHeight = wrapper.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+    const key = `${availableWidth}x${availableHeight}`;
+    if (fitted.get(host) === key || availableWidth <= 0 || availableHeight <= 0) return;
+    const apply = cols => {
+      const ports = splitPorts(cols, fit.inputs, fit.outputs), width = Math.ceil((cols * CELL + FRAME) / HP) * HP;
+      card.style.width = `${width}px`; card.style.setProperty('--cols', cols); card.dataset.windowCols = cols;
+      fit.params.style.setProperty('--param-cols', paramColumns(fit.controls, cols));
+      for (const [direction, group] of Object.entries(fit.groups)) {
+        const n = direction === 'input' ? ports.inCols : ports.outCols;
+        group.style.setProperty('--n', n); group.style.flexGrow = n;
+      }
+      return { cols, width, height: card.offsetHeight };
+    };
+    card.style.transform = '';
+    const most = clamp(Math.max(fit.controls, fit.inputs + fit.outputs, 2), 2, 8);
+    let best = null;
+    for (let cols = 2; cols <= most; cols++) {
+      const size = apply(cols), scale = Math.min(availableWidth / size.width, availableHeight / size.height);
+      if (!best || scale > best.scale + .01) best = { ...size, scale };
+    }
+    if (best.cols !== most) apply(best.cols);
+    const scale = clamp(best.scale, MIN_WINDOW_SCALE, MAX_WINDOW_SCALE);
+    card.style.transform = `scale(${scale})`; card.dataset.windowScale = scale.toFixed(3);
+    sizer.style.width = `${best.width * scale}px`; sizer.style.height = `${best.height * scale}px`;
+    fitted.set(host, key);
+  }
+  function layoutWindows() {
+    for (const host of renderedHosts) {
+      const win = host.ownerDocument.defaultView;
+      if (!win || pendingFits.has(host)) continue;
+      pendingFits.set(host, win.requestAnimationFrame(() => { pendingFits.delete(host); if (!destroyed && renderedHosts.has(host)) fitWindow(host); }));
+    }
+  }
+  function releaseHosts(keep = new Set()) {
+    hostCleanups.splice(0).forEach(cleanup => cleanup());
+    for (const [host, id] of pendingFits) { host.ownerDocument.defaultView?.cancelAnimationFrame(id); pendingFits.delete(host); }
+    for (const host of renderedHosts) if (!keep.has(host)) host.replaceChildren();
+    renderedHosts = new Set();
   }
   function cableGroup(edge, kind, handleEnds) {
     const group = svg('g', 'rack-cable'), shadow = svg('path', 'rack-cable-shadow'), wire = svg('path', 'rack-cable-wire'), hit = svg('path', 'rack-cable-hit');
@@ -537,7 +663,9 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     return item;
   }
   function render() {
-    cards = new Map(); jacks = new Map(); cableElements = []; widest = 0; rows.replaceChildren(); cables.replaceChildren(); tracks.replaceChildren();
+    cards = new Map(); windows = new Map(); jacks = new Map(); cableElements = []; widest = 0; rows.replaceChildren(); cables.replaceChildren(); tracks.replaceChildren();
+    const popped = [];
+    const place = node => { const host = hostFor(node); if (!host) return node.key === SCOPE ? makeScopeCard() : makeCard(node); popped.push([node, host]); return makeStub(node); };
     const trackIDs = [...new Set([...array(project.tracks).map(t => text(object(t).id)), ...nodes.filter(n => n.type === 'sequence').map(n => text(n.track))].filter(Boolean))];
     const all = el('option', '', 'All tracks / full patch'); all.value = ''; tracks.append(all);
     for (const id of trackIDs) { const option = el('option', '', id); option.value = id; tracks.append(option); }
@@ -555,10 +683,13 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       heading.append(el('span', '', track === null ? 'Shared sources / mix / output' : track), el('small', '', `${members.length} modules`));
       const modules = el('div', 'rack-module-grid');
       // The scope leads the rack; the scope screen element is moved, never recreated.
-      if (first && hasScope) modules.append(makeScopeCard());
+      if (first && hasScope) modules.append(place(scopeNode()));
       first = false;
-      members.forEach(n => modules.append(makeCard(n))); row.append(heading, modules); rows.append(row);
+      members.forEach(n => modules.append(place(n))); row.append(heading, modules); rows.append(row);
     }
+    const hosts = new Set(popped.map(([, host]) => host));
+    releaseHosts(hosts);
+    for (const [node, host] of popped) renderWindow(node, host);
     if (!nodes.length) rows.prepend(el('p', 'rack-empty', 'No modules yet. Add nodes and connections in the JSON editor to build the rack.'));
     for (const edge of edges) {
       const kind = edge.to.key === OUTPUT ? edge.to.port : signal(edge.to.port, byID.get(edge.to.key)?.type);
@@ -585,6 +716,11 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     for (const edge of allCables()) if (edge.from.key === selected || edge.to.key === selected) { related.add(edge.from.key); related.add(edge.to.key); }
     for (const [key, card] of cards) {
       card.classList.toggle('is-dimmed', !matches(key) || (!!selected && !related.has(key)));
+      card.classList.toggle('is-selected', selected === key);
+      card.querySelector('.rack-module-head').setAttribute('aria-pressed', String(selected === key));
+    }
+    // A popped-out faceplate is never dimmed in its own window; its rack stub is.
+    for (const [key, card] of windows) {
       card.classList.toggle('is-selected', selected === key);
       card.querySelector('.rack-module-head').setAttribute('aria-pressed', String(selected === key));
     }
@@ -721,6 +857,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
   }
   function refreshLayout() {
     if (destroyed) return;
+    layoutWindows();
     const win = currentWindow();
     if (observedWindow !== win) {
       gesture?.cancel(); observer?.disconnect(); observedWindow?.removeEventListener('resize', refreshLayout);
@@ -738,9 +875,16 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       project = object(next); view = object(view);
       const z = number(view.zoom, 0.8);
       state = { zoom: [0.5, 0.65, 0.8, 1, 1.2, 1.5].includes(z) ? z : 0.8, track: text(view.track), query: text(view.query), selected: text(view.selected), scrollLeft: Math.max(0, number(view.scrollLeft, 0)), scrollTop: Math.max(0, number(view.scrollTop, 0)) };
-      makeModel(); if (!byID.has(state.selected) && state.selected !== OUTPUT && !(hasScope && state.selected === SCOPE)) state.selected = ''; render();
+      makeModel(); if (!byID.has(state.selected) && state.selected !== OUTPUT && !(hasScope && state.selected === SCOPE)) state.selected = ''; loaded = true; render();
+    },
+    /** Map<module id ('$scope' for the oscilloscope), host element> of open module windows. */
+    setDetached(map) {
+      if (destroyed) return;
+      detached = new Map(map instanceof Map ? map : []);
+      if (!loaded) return;
+      gesture?.cancel(); render();
     },
     refreshLayout,
-    destroy() { destroyed = true; gesture?.cancel(); observer?.disconnect(); observedWindow?.removeEventListener('resize', refreshLayout); cancelFrame(frame); cancelFrame(scrollFrame); disposers.forEach(dispose => dispose()); root.replaceChildren(); root.classList.remove('rack-view', 'is-probing'); },
+    destroy() { destroyed = true; gesture?.cancel(); releaseHosts(); observer?.disconnect(); observedWindow?.removeEventListener('resize', refreshLayout); cancelFrame(frame); cancelFrame(scrollFrame); disposers.forEach(dispose => dispose()); root.replaceChildren(); root.classList.remove('rack-view', 'is-probing'); },
   };
 }

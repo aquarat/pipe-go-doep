@@ -88,6 +88,26 @@
 .rack-view .rack-scope-jack .rack-jack-value { color: #c6d0d5; font-weight: 400; }
 .rack-view .rack-scope-jack.is-unresolved .rack-jack-value { color: #ffb5a0; }
 .rack-view .rack-scope-note { display: block; font: 6.5px/1.35 ui-monospace, monospace; color: #94a3ab; letter-spacing: .04em; text-transform: uppercase; font-weight: 400; }
+.rack-view .rack-module-pop { position: absolute; z-index: 1; top: 0; right: 12px; width: 26px; height: 11px; min-height: 0; padding: 0; border: 1px solid #ffffff26; border-top: 0; border-radius: 0 0 4px 4px; background: #10181d; color: #b9c6cc; font: 10px/9px ui-sans-serif, system-ui, sans-serif; }
+.rack-view .rack-module-pop:hover { color: #fff; border-color: var(--module-accent); background: #1f2a31; }
+.rack-view .rack-module-stub { background: repeating-linear-gradient(135deg, #2c353c 0 7px, #283037 7px 14px); border-style: dashed; }
+.rack-view .rack-stub-panel { display: flex; flex-direction: column; gap: 5px; flex: 1; padding: 7px 0 6px; }
+.rack-view .rack-stub-badge { align-self: flex-start; padding: 1px 6px; border: 1px solid var(--module-accent); border-radius: 9px; color: var(--module-accent); font: 700 8px/1.5 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.rack-view .rack-stub-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.rack-view .rack-stub-actions button { flex: 1 1 0; min-height: 24px; padding: 2px 5px; font-size: 10px; }
+.rack-view .rack-module-stub .rack-jack-value, .rack-view .rack-module-stub .rack-scope-note { display: none; }
+/* A popped-out faceplate in its own window (host from module-windows.js). */
+.rack-view.rack-module-window { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 0; padding: 12px; overflow: auto; border: 0; border-radius: 0; background: repeating-linear-gradient(0deg, #162026 0, #162026 8px, #1a252d 9px, #11191f 10px); }
+.rack-view.rack-module-window .rack-module-window-sizer { position: relative; flex: 0 0 auto; margin: auto; }
+.rack-view.rack-module-window .rack-module-window-sizer > .rack-module { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.rack-view.rack-module-window.is-scope { align-items: stretch; }
+.rack-view.rack-module-window .rack-module.is-window.rack-family-scope { flex: 1 1 auto; width: 100%; min-height: 0; }
+.rack-view.rack-module-window .rack-scope-screen { --scope-screen-max-height: none; min-height: 0; }
+.rack-view.rack-module-window.is-scope .rack-module-head strong { font-size: 14px; }
+.rack-view.rack-module-window.is-scope .rack-module-head small, .rack-view.rack-module-window.is-scope .rack-module-number { font-size: 10px; }
+.rack-view.rack-module-window.is-scope .rack-jack-label { font-size: 11px; }
+.rack-view.rack-module-window.is-scope .rack-jack-value, .rack-view.rack-module-window.is-scope .rack-scope-note { font-size: 9px; }
+.rack-view.rack-module-window.is-scope .rack-scope-jack .rack-jack-ring { width: 22px; height: 22px; }
 .rack-view .rack-cables { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .rack-view .rack-cable { fill: none; stroke-linecap: round; opacity: .63; }
 .rack-view .rack-cable-shadow { stroke: #040a0e; stroke-width: 5.5px; }

@@ -1,3 +1,5 @@
+import { openDetachedWindow } from './detached-window.js';
+
 // One app, several documents: adopt the real nodes, never clone a component.
 export function createPaneWindows({ panes, onLayout = () => {}, onError = () => {}, onChange = () => {} }) {
   const records = new Map();
@@ -25,15 +27,15 @@ export function createPaneWindows({ panes, onLayout = () => {}, onError = () => 
   };
 
   function updateButton(record) {
-    const text = record.child ? 'Pop in' : 'Pop out';
+    const text = record.handle ? 'Pop in' : 'Pop out';
     record.control.textContent = text;
     record.control.setAttribute('aria-label', `${text} ${record.title}`);
     record.control.title = `${text} ${record.title}`;
-    record.pane.classList.toggle('pane-is-detached', !!record.child);
+    record.pane.classList.toggle('pane-is-detached', !!record.handle);
   }
 
   function queueLayout(record) {
-    const host = record.child || record.parent;
+    const host = record.handle?.window || record.parent;
     if (record.frame || host.closed || destroyed) return;
     record.frameHost = host;
     record.frame = host.requestAnimationFrame(() => {
@@ -43,7 +45,7 @@ export function createPaneWindows({ panes, onLayout = () => {}, onError = () => 
   }
 
   function cancelLayout(record) {
-    if (record.frame) record.frameHost.cancelAnimationFrame(record.frame);
+    if (record.frame) { try { record.frameHost.cancelAnimationFrame(record.frame); } catch { /* Window already gone. */ } }
     record.frame = 0;
   }
 
@@ -60,130 +62,119 @@ export function createPaneWindows({ panes, onLayout = () => {}, onError = () => 
     }
   }
 
-  function dock(name) {
+  // reason: 'api' (this API or a Pop in button), 'user' (child closed), 'opener' (main page unloading).
+  function dock(name, reason = 'api') {
     const record = records.get(name);
-    if (!record?.child) return false;
-    const child = record.child;
-    record.child = null;
+    if (!record?.handle) return false;
+    const handle = record.handle;
+    record.handle = null;
+    const geometry = handle.geometry();
     cancelLayout(record);
     record.childCleanup.splice(0).forEach(remove => remove());
-    const states = mediaState([...record.content.childNodes]);
-    // Anchors preserve the exact sibling order, including text and comments.
-    for (const { node, anchor } of record.slots) {
-      if (node.parentNode === record.content) anchor.replaceWith(node);
-      else anchor.remove();
+    if (record.content) {
+      const states = mediaState([...record.content.childNodes]);
+      // Anchors preserve the exact sibling order, including text and comments.
+      for (const { node, anchor } of record.slots) {
+        if (node.parentNode === record.content) anchor.replaceWith(node);
+        else anchor.remove();
+      }
+      // Include content appended by the app while this pane was detached.
+      record.pane.append(...record.content.childNodes);
+      restoreMedia(states);
     }
-    // Include content appended by the app while this pane was detached.
-    record.pane.append(...record.content.childNodes);
     record.slots = []; record.content = null;
-    record.placeholder.remove(); record.placeholder = null;
+    record.placeholder?.remove(); record.placeholder = null;
     updateButton(record);
-    restoreMedia(states);
-    if (!child.closed) child.close();
+    handle.close();
     notify(onLayout, name); queueLayout(record);
-    notify(onChange, name, false);
+    notify(onChange, name, false, geometry, reason);
     return true;
   }
 
-  function popOut(name) {
+  function popOut(name, geometry) {
     const record = records.get(name);
     if (destroyed || !record) return false;
-    if (record.child && !record.child.closed) { record.child.focus(); return true; }
-    if (record.child) dock(name);
-    let child;
-    try { child = record.parent.open('', '_blank', 'popup=yes,width=1200,height=850,resizable=yes,scrollbars=yes'); }
-    catch (error) { report(`Could not open ${record.title}: ${error.message}`); return false; }
-    if (!child) { report(`Pop-up blocked. Allow pop-ups for this site to pop out ${record.title}.`); return false; }
+    if (record.handle && !record.handle.window.closed) { record.handle.focus(); return true; }
+    if (record.handle) dock(name, 'user');
+    let opening = true, failed = false, handle = null;
+    handle = openDetachedWindow({
+      opener: record.parent, title: record.title, bodyClass: 'pane-window', geometry,
+      onClose: reason => { if (handle && record.handle === handle) dock(name, reason); },
+      onGeometry: current => { if (handle && record.handle === handle) notify(onChange, name, true, current); },
+      onLayout: () => { if (handle && record.handle === handle) queueLayout(record); },
+      onError: message => { if (opening) failed = true; report(message); },
+    });
+    opening = false;
+    if (!handle) {
+      if (!failed) report(`Pop-up blocked. Allow pop-ups for this site to pop out ${record.title}.`);
+      return false;
+    }
     const removers = record.childCleanup;
     try {
-      const doc = child.document;
-      doc.title = `${record.title} — Pipe Go Doep`;
-      doc.documentElement.lang = record.doc.documentElement.lang || 'en';
-      doc.documentElement.className = record.doc.documentElement.className;
-      doc.body.className = `${record.doc.body.className} pane-window`;
-      const viewport = doc.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1'; doc.head.append(viewport);
-      // Copy styles only, never scripts, app state or project HTML.
-      const styles = [];
-      for (const source of record.doc.querySelectorAll('link[rel~="stylesheet"], style')) {
-        const copy = doc.importNode(source, true);
-        if (source.tagName === 'LINK') {
-          copy.href = source.href;
-          styles.push(new Promise(resolve => {
-            listen(copy, 'load', resolve, removers);
-            listen(copy, 'error', () => { report(`Could not load pop-out stylesheet: ${copy.href}`); resolve(); }, removers);
-          }));
-        }
-        doc.head.append(copy);
-      }
-      const header = element(doc, 'header', 'pane-window-header');
-      const heading = element(doc, 'h1', 'pane-window-title', record.title);
-      header.append(heading, button(doc, 'Pop in', `Pop in ${record.title}`, () => dock(name), removers));
-      const main = element(doc, 'main', 'pane-window-main');
+      const doc = handle.document;
+      handle.header.classList.add('pane-window-header');
+      handle.title.classList.add('pane-window-title');
+      handle.actions.append(button(doc, 'Pop in', `Pop in ${record.title}`, () => dock(name), removers));
+      handle.content.classList.add('pane-window-main');
       const content = element(doc, 'section', `${record.pane.className} pane-window-content`);
       content.dataset.pane = name; content.setAttribute('aria-label', record.title);
-      main.append(content); doc.body.append(header, main);
+      handle.content.append(content);
       const placeholder = element(record.doc, 'div', 'pane-window-placeholder');
       placeholder.append(element(record.doc, 'span', '', `${record.title} is open in a separate window.`),
         button(record.doc, 'Pop in', `Pop in ${record.title}`, () => dock(name), removers));
       const nodes = [...record.pane.childNodes].filter(node => node !== record.summary);
       const states = mediaState(nodes);
-      record.child = child; record.content = content; record.placeholder = placeholder;
+      record.handle = handle; record.content = content; record.placeholder = placeholder;
       record.slots = nodes.map(node => {
         const anchor = record.doc.createComment('pane-window slot');
         node.before(anchor); content.append(node);
         return { node, anchor };
       });
       record.pane.append(placeholder); updateButton(record);
-      listen(child, 'beforeunload', () => dock(name), removers);
-      listen(child, 'pagehide', () => dock(name), removers);
-      listen(child, 'resize', () => queueLayout(record), removers);
       restoreMedia(states);
       cancelLayout(record);
       // Rebind observers/rAF immediately; measure again once all CSS has loaded.
       notify(onLayout, name); queueLayout(record);
-      Promise.all(styles).then(() => { if (record.child === child && !destroyed) queueLayout(record); });
-      notify(onChange, name, true);
-      child.focus();
+      notify(onChange, name, true, handle.geometry());
+      handle.focus();
       return true;
     } catch (error) {
-      if (record.child) dock(name);
-      else { removers.splice(0).forEach(remove => remove()); child.close(); }
+      if (record.handle) dock(name);
+      else { removers.splice(0).forEach(remove => remove()); handle.close(); }
       report(`Could not pop out ${record.title}: ${error.message}`);
       return false;
     }
   }
 
-  function dockAll() { for (const name of records.keys()) dock(name); }
+  function dockAll(reason = 'api') { for (const name of records.keys()) dock(name, reason); }
   function refresh() {
     if (destroyed) return;
     for (const record of records.values()) {
-      if (record.child?.closed) dock(record.name);
+      if (record.handle?.window.closed) dock(record.name, 'user');
       else { notify(onLayout, record.name); queueLayout(record); }
     }
   }
 
-  const parents = new Set();
   for (const pane of panes) {
     const name = pane.dataset.pane;
     const summary = [...pane.children].find(node => node.tagName === 'SUMMARY');
     if (!name || !summary || records.has(name)) continue;
     const doc = pane.ownerDocument, parent = doc.defaultView;
     const title = summary.querySelector('h2')?.textContent.trim() || name;
-    const record = { name, title, pane, summary, doc, parent, child: null, childCleanup: [], slots: [], frame: 0 };
-    record.control = button(doc, 'Pop out', `Pop out ${title}`, () => record.child ? dock(name) : popOut(name), cleanup);
-    summary.append(record.control); records.set(name, record); parents.add(parent);
+    const record = { name, title, pane, summary, doc, parent, handle: null, content: null, placeholder: null, childCleanup: [], slots: [], frame: 0 };
+    record.control = button(doc, 'Pop out', `Pop out ${title}`, () => record.handle ? dock(name) : popOut(name), cleanup);
+    summary.append(record.control); records.set(name, record);
   }
-  for (const parent of parents) {
-    listen(parent, 'beforeunload', dockAll, cleanup);
-    listen(parent, 'pagehide', dockAll, cleanup);
-  }
+  // Opener unload is handled per window by detached-window.js (reason 'opener').
   return {
-    popOut, dock, dockAll, refresh,
+    popOut, dock: name => dock(name), dockAll: () => dockAll(), refresh,
+    isDetached: name => !!records.get(name)?.handle,
     destroy() {
       if (destroyed) return;
       dockAll(); destroyed = true;
       for (const record of records.values()) { cancelLayout(record); record.control.remove(); }
-      cleanup.splice(0).forEach(remove => remove()); records.clear();
+      cleanup.splice(0).forEach(remove => remove());
+      records.clear();
     },
   };
 }

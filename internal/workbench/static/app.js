@@ -2,6 +2,9 @@ import { createScoreView } from './score-view.js';
 import { createRackView } from './rack-view.js';
 import { createJSONTree } from './json-tree.js';
 import { createPaneWindows } from './pane-windows.js';
+import { createModuleWindows, SCOPE_MODULE_ID } from './module-windows.js';
+import { normalizeLayout, setWindow, restoreQueue, pruneLayout } from './workspace-layout.js';
+import { MODULES } from './rack-model.js';
 import { synthRequest } from './render-client.js';
 import { createTransportUI } from './transport-ui.js';
 import { createScopeView } from './scope-view.js';
@@ -24,6 +27,9 @@ let currentSignature = '';
 let wavURL = null, wavePeaks = null, rendered = null, busy = false, requestSerial = 0;
 let loadSerial = 0;
 let revision = 0, paneWindows = null, transport = null;
+// Pop-out layout of the open project; pendingWindows are saved windows the
+// browser has not yet allowed us to reopen.
+let layout = normalizeLayout(), pendingWindows = [], layoutSuspended = false, layoutTimer;
 let settingPanes = false, editTimer, viewSaveTimer;
 let storage = null;
 try { storage = window.localStorage; } catch { /* Editing/rendering work without storage. */ }
@@ -130,8 +136,66 @@ function editScope(change, message) {
   } catch (e) { status(e.message, 'error'); return false; }
 }
 
+function moduleTitle(id) {
+  if (id === SCOPE_MODULE_ID) return 'Oscilloscope';
+  const node = (project?.nodes || []).find(n => n?.id === id);
+  return node ? `${id} · ${(MODULES[node.type]?.title || node.type || 'module').split(' · ')[0]}` : id;
+}
+function moduleIDs() { return [SCOPE_MODULE_ID, ...(project?.nodes || []).map(n => n?.id).filter(id => typeof id === 'string' && id)]; }
+function persistLayout(kind, id, geometry) {
+  if (layoutSuspended || !project) return;
+  layout = setWindow(layout, kind, id, geometry);
+  browserState.windows = layout;
+  clearTimeout(layoutTimer); layoutTimer = setTimeout(saveDraft, 400);
+}
+function windowChange(kind, id, open, geometry, reason) {
+  // Reloading or leaving the page closes children: keep them in the layout.
+  if (open) persistLayout(kind, id, geometry || {});
+  else if (reason !== 'opener') persistLayout(kind, id, null);
+}
+function syncDetached() {
+  rackView.setDetached(new Map(moduleWindows.ids().map(id => [id, moduleWindows.host(id)])));
+  scopeView.refresh();
+}
+function openSavedWindow({ kind, id, geometry }) {
+  return kind === 'panes' ? paneWindows.popOut(id, geometry) : !!moduleWindows.popOut(id, { title: moduleTitle(id), geometry });
+}
+function updateRestoreButton() {
+  const restore = $('restore-windows');
+  restore.hidden = !pendingWindows.length;
+  restore.textContent = pendingWindows.length > 1 ? `Restore windows (${pendingWindows.length})` : 'Restore window';
+}
+// Browsers allow pop-ups from page load only when the site is trusted, and
+// usually just one per click. Try automatically, then offer one per click.
+function restoreWorkspace() {
+  pendingWindows = restoreQueue(layout, { panes: paneElements.map(p => p.dataset.pane), modules: moduleIDs() });
+  layout = pruneLayout(layout, { panes: paneElements.map(p => p.dataset.pane), modules: moduleIDs() });
+  while (pendingWindows.length && openSavedWindow(pendingWindows[0])) pendingWindows.shift();
+  updateRestoreButton();
+  if (pendingWindows.length) status(`This workspace had ${pendingWindows.length} pop-out window${pendingWindows.length === 1 ? '' : 's'}. Press Restore window${pendingWindows.length === 1 ? '' : 's'} to reopen ${pendingWindows.length === 1 ? 'it' : 'them'}.`);
+}
+$('restore-windows').onclick = () => {
+  if (!pendingWindows.length) return;
+  if (openSavedWindow(pendingWindows[0])) pendingWindows.shift();
+  else status('The browser blocked the pop-up. Allow pop-ups for this site to restore windows.', 'error');
+  updateRestoreButton();
+};
+
+const moduleWindows = createModuleWindows({
+  opener: window,
+  onChange(id, open, geometry, reason) { windowChange('modules', id, open, geometry, reason); syncDetached(); },
+  onLayout: () => { rackView.refreshLayout(); scopeView.refresh(); },
+  onError: message => status(message, 'error'),
+});
+
 const rackView = createRackView($('rack-view'), {
   scopeScreen,
+  onPopOutModule(id) {
+    if (moduleWindows.isOpen(id)) { moduleWindows.focus(id); return; }
+    pendingWindows = pendingWindows.filter(item => !(item.kind === 'modules' && item.id === id)); updateRestoreButton();
+    if (moduleWindows.popOut(id, { title: moduleTitle(id), geometry: layout.modules[id] })) syncDetached();
+  },
+  onPopInModule: id => moduleWindows.dock(id),
   onProbe({ channel, ref }) {
     return editScope(current => setProbe(current, channel, ref),
       ref ? `${channel.toUpperCase()} now probes ${probeLabels(setProbe(project, channel, ref))[channel]}.` : `${channel.toUpperCase()} unplugged.`);
@@ -185,7 +249,11 @@ paneWindows = createPaneWindows({
   panes: paneElements.filter(pane => pane.classList.contains('pane')),
   onLayout: refreshPane,
   onError: message => status(message, 'error'),
-  onChange: () => saveDraft(),
+  onChange(name, detached, geometry, reason) {
+    if (typeof detached !== 'boolean') { saveDraft(); return; }
+    if (detached) { pendingWindows = pendingWindows.filter(item => !(item.kind === 'panes' && item.id === name)); updateRestoreButton(); }
+    windowChange('panes', name, detached, geometry, reason);
+  },
 });
 
 transport = createTransportUI($('transport'), {
@@ -257,6 +325,8 @@ function syncProject({ redrawTree = true } = {}) {
   if (redrawTree) tree.setProject(project);
   scoreView.setProject(project, browserState.score || {});
   rackView.setProject(project, browserState.rack || {});
+  const ids = new Set(moduleIDs());
+  for (const id of moduleWindows.ids()) if (!ids.has(id)) moduleWindows.dock(id);
   transport?.setProject(project, browserState.transport || {});
   const scope = scopeState(project);
   transport?.setProbes(probeList(project));
@@ -285,13 +355,20 @@ function openProject(value, { restoreDraft = false, fallbackID } = {}) {
     try { next = prepareWorkbenchProject(JSON.parse(saved.draft), next.id); }
     catch { status('The saved draft could not be read; opening the supplied project.', 'error'); saved = {}; }
   }
-  if (project?.id !== next.id) { paneWindows?.dockAll(); clearAudio(); }
+  if (project?.id !== next.id) {
+    // Closing another project's windows is not a layout change for it.
+    layoutSuspended = true; paneWindows?.dockAll(); moduleWindows.dockAll(); layoutSuspended = false;
+    clearAudio();
+  }
+  const switching = project?.id !== next.id;
   project = next; browserState = saved;
+  if (switching) { layout = normalizeLayout(saved.windows); browserState.windows = layout; pendingWindows = []; }
   scopeView.setView(browserState.scope || {});
   sourceDirty = restoreDraft && typeof saved.sourceDraft === 'string';
   sourceDraft = sourceDirty ? saved.sourceDraft : '';
   editor.value = sourceDirty ? sourceDraft : serialise();
   restorePanes(); syncProject();
+  if (switching) restoreWorkspace();
 }
 
 async function loadExample() {
@@ -426,7 +503,9 @@ async function request(action) {
 $('render').onclick = () => request('render'); $('validate').onclick = () => request('validate');
 window.addEventListener('resize', drawWave);
 window.addEventListener('pagehide', event => {
-  paneWindows?.dockAll(); saveDraft();
+  layoutSuspended = true;
+  paneWindows?.dockAll(); moduleWindows.dockAll(); saveDraft();
+  if (event.persisted) layoutSuspended = false;
   if (event.persisted) transport?.pause(); else transport?.destroy();
 });
 

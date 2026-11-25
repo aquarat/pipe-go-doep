@@ -36,3 +36,6 @@
 @container (min-width: 640px) {
   .scope-view .scope-channel { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.1fr) auto auto; grid-template-areas: "chip label read scale offset"; }
 }
+/* Fill mode: inside a .scope-fill flex container (a pop-out window) the screen takes all spare height. */
+.scope-fill > .scope-view { flex: 1 1 auto; min-height: 0; }
+.scope-fill > .scope-view .scope-screen { flex: 1 1 0; aspect-ratio: auto; max-height: none; min-height: 120px; }
