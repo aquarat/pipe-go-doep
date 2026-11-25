@@ -1,0 +1,4135 @@
+{
+  "version": 1,
+  "id": "20a08ffd-4fcb-4470-a0e1-17cc5ec3de0c",
+  "title": "Lantern Duel",
+  "sample_rate": 44100,
+  "bpm": 160,
+  "beats": 96,
+  "tail_seconds": 2,
+  "seed": 198907,
+  "tracks": [
+    {
+      "id": "melody",
+      "patterns": {
+        "rest": [
+          {
+            "note": ".",
+            "beats": 4.0
+          }
+        ],
+        "pickup": [
+          {
+            "note": ".",
+            "beats": 2.0
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a1": [
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a2": [
+          {
+            "note": "F5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "a3": [
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a4": [
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a5": [
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "a6": [
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a7": [
+          {
+            "note": "G5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "a8": [
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 1.0,
+            "velocity": 1.0,
+            "gate": 0.85
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b1": [
+          {
+            "note": "Bb5",
+            "beats": 1.0,
+            "velocity": 0.95,
+            "gate": 0.9
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b2": [
+          {
+            "note": "C6",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b3": [
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F6",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b4": [
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C#6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b5": [
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b6": [
+          {
+            "note": "E6",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b7": [
+          {
+            "note": "F6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.75,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "b8": [
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#6",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "close1": [
+          {
+            "note": "D6",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": "A5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C#5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          }
+        ],
+        "close2": [
+          {
+            "note": "D5",
+            "beats": 2.5,
+            "velocity": 0.9,
+            "gate": 0.85
+          },
+          {
+            "note": ".",
+            "beats": 1.5
+          }
+        ]
+      },
+      "order": [
+        "rest",
+        "pickup",
+        "a1",
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+        "a8",
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6",
+        "b7",
+        "b8",
+        "a5",
+        "a6",
+        "a7",
+        "a8",
+        "close1",
+        "close2"
+      ],
+      "transpose": 0
+    },
+    {
+      "id": "counter",
+      "patterns": {
+        "rest": [
+          {
+            "note": ".",
+            "beats": 4.0
+          }
+        ],
+        "Dm": [
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "Dm_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "Dm_sparse": [
+          {
+            "note": "D4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "F": [
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "F_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "F_sparse": [
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "Gm": [
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "Gm_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "Gm_sparse": [
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "D5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "A": [
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C#5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C#5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "A4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C#5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C#5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "A_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C#5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C#5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "E5",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "A_sparse": [
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C#5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "E5",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "Bb": [
+          {
+            "note": "Bb3",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb3",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "Bb_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "Bb3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "D4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "Bb4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "Bb_sparse": [
+          {
+            "note": "Bb3",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "D4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "F4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "C": [
+          {
+            "note": "C4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C4",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "C5",
+            "beats": 0.25,
+            "velocity": 0.8,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "E4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.6
+          }
+        ],
+        "C_answer": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "E4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "E4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G4",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C5",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          }
+        ],
+        "C_sparse": [
+          {
+            "note": "C4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "E4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "G4",
+            "beats": 0.5,
+            "velocity": 0.58,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "finish": [
+          {
+            "note": "D4",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          },
+          {
+            "note": "A4",
+            "beats": 0.5,
+            "velocity": 0.55,
+            "gate": 0.78
+          },
+          {
+            "note": "D5",
+            "beats": 1.0,
+            "velocity": 0.5,
+            "gate": 0.8
+          },
+          {
+            "note": ".",
+            "beats": 2.0
+          }
+        ]
+      },
+      "order": [
+        "Dm_sparse",
+        "A_sparse",
+        "Dm",
+        "F",
+        "Gm",
+        "A",
+        "Dm",
+        "F",
+        "Gm",
+        "A",
+        "Bb_answer",
+        "C_answer",
+        "Dm_answer",
+        "A_answer",
+        "Bb_answer",
+        "C_answer",
+        "Dm_answer",
+        "A_answer",
+        "Dm",
+        "F",
+        "Gm",
+        "A",
+        "A",
+        "finish"
+      ],
+      "transpose": 0
+    },
+    {
+      "id": "bass",
+      "patterns": {
+        "Dm": [
+          {
+            "note": "D2",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "D2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "D2",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "A2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "D2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "Dm_push": [
+          {
+            "note": "D2",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "D2",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "D2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "D2",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "D2",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "A2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "Dm_hold": [
+          {
+            "note": "D2",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "F": [
+          {
+            "note": "F2",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "F2",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "E2",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "F_push": [
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "F2",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "E2",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "F_hold": [
+          {
+            "note": "F2",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "Gm": [
+          {
+            "note": "G2",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "D3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "G2",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "D3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "Gm_push": [
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "G2",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "D3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "G2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "D3",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "G2",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "D3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "Gm_hold": [
+          {
+            "note": "G2",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "A": [
+          {
+            "note": "A2",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "E3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "A2",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "E3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "C#3",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "A_push": [
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "A2",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "E3",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "A2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "A2",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "E3",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "A2",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "E3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "C#3",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "A_hold": [
+          {
+            "note": "A2",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "Bb": [
+          {
+            "note": "Bb1",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "F2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "A1",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "Bb_push": [
+          {
+            "note": "Bb1",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "Bb1",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "F2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "A1",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "Bb_hold": [
+          {
+            "note": "Bb1",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "C": [
+          {
+            "note": "C2",
+            "beats": 0.75,
+            "velocity": 1.0,
+            "gate": 0.78
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.78
+          },
+          {
+            "note": "C2",
+            "beats": 0.75,
+            "velocity": 0.95,
+            "gate": 0.78
+          },
+          {
+            "note": "G2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.78
+          },
+          {
+            "note": "C2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.78
+          },
+          {
+            "note": "B1",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.78
+          }
+        ],
+        "C_push": [
+          {
+            "note": "C2",
+            "beats": 0.5,
+            "velocity": 1.0,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C2",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.72
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.72
+          },
+          {
+            "note": "C2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C2",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.72
+          },
+          {
+            "note": "G2",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.72
+          },
+          {
+            "note": "C2",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.72
+          },
+          {
+            "note": "G2",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.72
+          },
+          {
+            "note": "B1",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.72
+          }
+        ],
+        "C_hold": [
+          {
+            "note": "C2",
+            "beats": 3.0,
+            "velocity": 0.85,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          }
+        ],
+        "finish": [
+          {
+            "note": "D2",
+            "beats": 2.0,
+            "velocity": 0.9,
+            "gate": 0.9
+          },
+          {
+            "note": ".",
+            "beats": 2.0
+          }
+        ]
+      },
+      "order": [
+        "Dm_hold",
+        "A_hold",
+        "Dm",
+        "F_push",
+        "Gm",
+        "A_push",
+        "Dm",
+        "F_push",
+        "Gm",
+        "A_push",
+        "Bb",
+        "C_push",
+        "Dm",
+        "A_push",
+        "Bb",
+        "C_push",
+        "Dm",
+        "A_push",
+        "Dm",
+        "F_push",
+        "Gm",
+        "A_push",
+        "A",
+        "finish"
+      ],
+      "transpose": 0
+    },
+    {
+      "id": "hat",
+      "patterns": {
+        "rest": [
+          {
+            "note": ".",
+            "beats": 4.0
+          }
+        ],
+        "sparse": [
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.6,
+            "gate": 0.12
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.5,
+            "gate": 0.12
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.12
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.5,
+            "gate": 0.12
+          }
+        ],
+        "eight": [
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.6,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.5,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.65,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.85,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.5,
+            "gate": 0.1
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.75,
+            "gate": 0.1
+          }
+        ],
+        "skip": [
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.7,
+            "gate": 0.12
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C8",
+            "beats": 0.25,
+            "velocity": 0.45,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.6,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.6,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.25,
+            "velocity": 0.55,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.25,
+            "velocity": 0.4,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.7,
+            "gate": 0.12
+          },
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.12
+          }
+        ],
+        "finish": [
+          {
+            "note": "C8",
+            "beats": 0.5,
+            "velocity": 0.6,
+            "gate": 0.12
+          },
+          {
+            "note": ".",
+            "beats": 3.5
+          }
+        ]
+      },
+      "order": [
+        "sparse",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "skip",
+        "eight",
+        "finish"
+      ],
+      "transpose": 0
+    },
+    {
+      "id": "snare",
+      "patterns": {
+        "rest": [
+          {
+            "note": ".",
+            "beats": 4.0
+          }
+        ],
+        "back": [
+          {
+            "note": ".",
+            "beats": 1.0
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.95,
+            "gate": 0.48
+          },
+          {
+            "note": ".",
+            "beats": 1.75
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.48
+          },
+          {
+            "note": ".",
+            "beats": 0.75
+          }
+        ],
+        "ghost": [
+          {
+            "note": ".",
+            "beats": 1.0
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.95,
+            "gate": 0.35
+          },
+          {
+            "note": ".",
+            "beats": 1.25
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.32,
+            "gate": 0.35
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.35
+          },
+          {
+            "note": ".",
+            "beats": 0.75
+          }
+        ],
+        "fill": [
+          {
+            "note": ".",
+            "beats": 1.0
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.9,
+            "gate": 0.38
+          },
+          {
+            "note": ".",
+            "beats": 0.75
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.45,
+            "gate": 0.38
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.38
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.5,
+            "gate": 0.38
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.85,
+            "gate": 0.38
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.65,
+            "gate": 0.38
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 0.95,
+            "gate": 0.38
+          },
+          {
+            "note": "G6",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.38
+          }
+        ],
+        "finish": [
+          {
+            "note": "G6",
+            "beats": 0.5,
+            "velocity": 0.8,
+            "gate": 0.5
+          },
+          {
+            "note": ".",
+            "beats": 3.5
+          }
+        ]
+      },
+      "order": [
+        "rest",
+        "fill",
+        "back",
+        "ghost",
+        "back",
+        "ghost",
+        "back",
+        "ghost",
+        "back",
+        "fill",
+        "back",
+        "ghost",
+        "back",
+        "ghost",
+        "back",
+        "ghost",
+        "back",
+        "fill",
+        "back",
+        "ghost",
+        "back",
+        "ghost",
+        "fill",
+        "finish"
+      ],
+      "transpose": 0
+    },
+    {
+      "id": "thud",
+      "patterns": {
+        "rest": [
+          {
+            "note": ".",
+            "beats": 4.0
+          }
+        ],
+        "steady": [
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 1.75
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.9,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 1.75
+          }
+        ],
+        "push": [
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 1.0,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 1.25
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.7,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 0.25
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.95,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 1.0
+          },
+          {
+            "note": "C3",
+            "beats": 0.25,
+            "velocity": 0.75,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 0.5
+          }
+        ],
+        "finish": [
+          {
+            "note": "C3",
+            "beats": 0.5,
+            "velocity": 0.95,
+            "gate": 0.4
+          },
+          {
+            "note": ".",
+            "beats": 3.5
+          }
+        ]
+      },
+      "order": [
+        "rest",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "push",
+        "steady",
+        "finish"
+      ],
+      "transpose": 0
+    }
+  ],
+  "nodes": [
+    {
+      "id": "melody_seq",
+      "type": "sequence",
+      "track": "melody"
+    },
+    {
+      "id": "melody_osc",
+      "type": "pulse",
+      "params": {
+        "duty": 0.25
+      }
+    },
+    {
+      "id": "melody_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.002,
+        "decay": 0.07,
+        "sustain": 0.62,
+        "release": 0.045
+      }
+    },
+    {
+      "id": "melody_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "melody_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "melody_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.17
+      }
+    },
+    {
+      "id": "melody_pan",
+      "type": "pan",
+      "params": {
+        "pan": -0.12
+      }
+    },
+    {
+      "id": "counter_seq",
+      "type": "sequence",
+      "track": "counter"
+    },
+    {
+      "id": "counter_osc",
+      "type": "pulse",
+      "params": {
+        "duty": 0.125
+      }
+    },
+    {
+      "id": "counter_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.002,
+        "decay": 0.07,
+        "sustain": 0.36,
+        "release": 0.045
+      }
+    },
+    {
+      "id": "counter_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "counter_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "counter_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.085
+      }
+    },
+    {
+      "id": "counter_pan",
+      "type": "pan",
+      "params": {
+        "pan": 0.25
+      }
+    },
+    {
+      "id": "bass_seq",
+      "type": "sequence",
+      "track": "bass"
+    },
+    {
+      "id": "bass_osc",
+      "type": "wavetable",
+      "params": {
+        "bits": 4
+      }
+    },
+    {
+      "id": "bass_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.002,
+        "decay": 0.045,
+        "sustain": 0.62,
+        "release": 0.045
+      }
+    },
+    {
+      "id": "bass_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "bass_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "bass_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.19
+      }
+    },
+    {
+      "id": "bass_pan",
+      "type": "pan",
+      "params": {
+        "pan": 0
+      }
+    },
+    {
+      "id": "drum_noise",
+      "type": "noise",
+      "params": {
+        "freq": 14000,
+        "short": 0
+      }
+    },
+    {
+      "id": "hat_seq",
+      "type": "sequence",
+      "track": "hat"
+    },
+    {
+      "id": "hat_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.0005,
+        "decay": 0.018,
+        "sustain": 0.0,
+        "release": 0.012
+      }
+    },
+    {
+      "id": "hat_filter",
+      "type": "lowpass",
+      "params": {
+        "cutoff": 8500
+      }
+    },
+    {
+      "id": "hat_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "hat_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "hat_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.045
+      }
+    },
+    {
+      "id": "hat_pan",
+      "type": "pan",
+      "params": {
+        "pan": 0.4
+      }
+    },
+    {
+      "id": "snare_seq",
+      "type": "sequence",
+      "track": "snare"
+    },
+    {
+      "id": "snare_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.001,
+        "decay": 0.095,
+        "sustain": 0.08,
+        "release": 0.055
+      }
+    },
+    {
+      "id": "snare_filter",
+      "type": "lowpass",
+      "params": {
+        "cutoff": 4200
+      }
+    },
+    {
+      "id": "snare_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "snare_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "snare_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.13
+      }
+    },
+    {
+      "id": "snare_pan",
+      "type": "pan",
+      "params": {
+        "pan": -0.15
+      }
+    },
+    {
+      "id": "thud_seq",
+      "type": "sequence",
+      "track": "thud"
+    },
+    {
+      "id": "thud_shape",
+      "type": "adsr",
+      "params": {
+        "attack": 0.001,
+        "decay": 0.045,
+        "sustain": 0.0,
+        "release": 0.035
+      }
+    },
+    {
+      "id": "thud_filter",
+      "type": "lowpass",
+      "params": {
+        "cutoff": 240
+      }
+    },
+    {
+      "id": "thud_env",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "thud_vel",
+      "type": "vca",
+      "params": {}
+    },
+    {
+      "id": "thud_level",
+      "type": "vca",
+      "params": {
+        "gain": 0.19
+      }
+    },
+    {
+      "id": "thud_pan",
+      "type": "pan",
+      "params": {
+        "pan": 0
+      }
+    },
+    {
+      "id": "melodic_l",
+      "type": "mixer",
+      "params": {}
+    },
+    {
+      "id": "rhythm_l",
+      "type": "mixer",
+      "params": {}
+    },
+    {
+      "id": "master_l",
+      "type": "mixer",
+      "params": {}
+    },
+    {
+      "id": "melodic_r",
+      "type": "mixer",
+      "params": {}
+    },
+    {
+      "id": "rhythm_r",
+      "type": "mixer",
+      "params": {}
+    },
+    {
+      "id": "master_r",
+      "type": "mixer",
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "from": "melody_seq.freq",
+      "to": "melody_osc.freq"
+    },
+    {
+      "from": "melody_seq.gate",
+      "to": "melody_shape.gate"
+    },
+    {
+      "from": "melody_seq.trigger",
+      "to": "melody_shape.trigger"
+    },
+    {
+      "from": "melody_osc.out",
+      "to": "melody_env.in"
+    },
+    {
+      "from": "melody_shape.out",
+      "to": "melody_env.gain"
+    },
+    {
+      "from": "melody_env.out",
+      "to": "melody_vel.in"
+    },
+    {
+      "from": "melody_seq.velocity",
+      "to": "melody_vel.gain"
+    },
+    {
+      "from": "melody_vel.out",
+      "to": "melody_level.in"
+    },
+    {
+      "from": "melody_level.out",
+      "to": "melody_pan.in"
+    },
+    {
+      "from": "counter_seq.freq",
+      "to": "counter_osc.freq"
+    },
+    {
+      "from": "counter_seq.gate",
+      "to": "counter_shape.gate"
+    },
+    {
+      "from": "counter_seq.trigger",
+      "to": "counter_shape.trigger"
+    },
+    {
+      "from": "counter_osc.out",
+      "to": "counter_env.in"
+    },
+    {
+      "from": "counter_shape.out",
+      "to": "counter_env.gain"
+    },
+    {
+      "from": "counter_env.out",
+      "to": "counter_vel.in"
+    },
+    {
+      "from": "counter_seq.velocity",
+      "to": "counter_vel.gain"
+    },
+    {
+      "from": "counter_vel.out",
+      "to": "counter_level.in"
+    },
+    {
+      "from": "counter_level.out",
+      "to": "counter_pan.in"
+    },
+    {
+      "from": "bass_seq.freq",
+      "to": "bass_osc.freq"
+    },
+    {
+      "from": "bass_seq.gate",
+      "to": "bass_shape.gate"
+    },
+    {
+      "from": "bass_seq.trigger",
+      "to": "bass_shape.trigger"
+    },
+    {
+      "from": "bass_osc.out",
+      "to": "bass_env.in"
+    },
+    {
+      "from": "bass_shape.out",
+      "to": "bass_env.gain"
+    },
+    {
+      "from": "bass_env.out",
+      "to": "bass_vel.in"
+    },
+    {
+      "from": "bass_seq.velocity",
+      "to": "bass_vel.gain"
+    },
+    {
+      "from": "bass_vel.out",
+      "to": "bass_level.in"
+    },
+    {
+      "from": "bass_level.out",
+      "to": "bass_pan.in"
+    },
+    {
+      "from": "hat_seq.gate",
+      "to": "hat_shape.gate"
+    },
+    {
+      "from": "hat_seq.trigger",
+      "to": "hat_shape.trigger"
+    },
+    {
+      "from": "drum_noise.out",
+      "to": "hat_filter.in"
+    },
+    {
+      "from": "hat_filter.out",
+      "to": "hat_env.in"
+    },
+    {
+      "from": "hat_shape.out",
+      "to": "hat_env.gain"
+    },
+    {
+      "from": "hat_env.out",
+      "to": "hat_vel.in"
+    },
+    {
+      "from": "hat_seq.velocity",
+      "to": "hat_vel.gain"
+    },
+    {
+      "from": "hat_vel.out",
+      "to": "hat_level.in"
+    },
+    {
+      "from": "hat_level.out",
+      "to": "hat_pan.in"
+    },
+    {
+      "from": "snare_seq.gate",
+      "to": "snare_shape.gate"
+    },
+    {
+      "from": "snare_seq.trigger",
+      "to": "snare_shape.trigger"
+    },
+    {
+      "from": "drum_noise.out",
+      "to": "snare_filter.in"
+    },
+    {
+      "from": "snare_filter.out",
+      "to": "snare_env.in"
+    },
+    {
+      "from": "snare_shape.out",
+      "to": "snare_env.gain"
+    },
+    {
+      "from": "snare_env.out",
+      "to": "snare_vel.in"
+    },
+    {
+      "from": "snare_seq.velocity",
+      "to": "snare_vel.gain"
+    },
+    {
+      "from": "snare_vel.out",
+      "to": "snare_level.in"
+    },
+    {
+      "from": "snare_level.out",
+      "to": "snare_pan.in"
+    },
+    {
+      "from": "thud_seq.gate",
+      "to": "thud_shape.gate"
+    },
+    {
+      "from": "thud_seq.trigger",
+      "to": "thud_shape.trigger"
+    },
+    {
+      "from": "drum_noise.out",
+      "to": "thud_filter.in"
+    },
+    {
+      "from": "thud_filter.out",
+      "to": "thud_env.in"
+    },
+    {
+      "from": "thud_shape.out",
+      "to": "thud_env.gain"
+    },
+    {
+      "from": "thud_env.out",
+      "to": "thud_vel.in"
+    },
+    {
+      "from": "thud_seq.velocity",
+      "to": "thud_vel.gain"
+    },
+    {
+      "from": "thud_vel.out",
+      "to": "thud_level.in"
+    },
+    {
+      "from": "thud_level.out",
+      "to": "thud_pan.in"
+    },
+    {
+      "from": "melody_pan.left",
+      "to": "melodic_l.a"
+    },
+    {
+      "from": "counter_pan.left",
+      "to": "melodic_l.b"
+    },
+    {
+      "from": "bass_pan.left",
+      "to": "melodic_l.c"
+    },
+    {
+      "from": "hat_pan.left",
+      "to": "rhythm_l.a"
+    },
+    {
+      "from": "snare_pan.left",
+      "to": "rhythm_l.b"
+    },
+    {
+      "from": "thud_pan.left",
+      "to": "rhythm_l.c"
+    },
+    {
+      "from": "melodic_l.out",
+      "to": "master_l.a"
+    },
+    {
+      "from": "rhythm_l.out",
+      "to": "master_l.b"
+    },
+    {
+      "from": "melody_pan.right",
+      "to": "melodic_r.a"
+    },
+    {
+      "from": "counter_pan.right",
+      "to": "melodic_r.b"
+    },
+    {
+      "from": "bass_pan.right",
+      "to": "melodic_r.c"
+    },
+    {
+      "from": "hat_pan.right",
+      "to": "rhythm_r.a"
+    },
+    {
+      "from": "snare_pan.right",
+      "to": "rhythm_r.b"
+    },
+    {
+      "from": "thud_pan.right",
+      "to": "rhythm_r.c"
+    },
+    {
+      "from": "melodic_r.out",
+      "to": "master_r.a"
+    },
+    {
+      "from": "rhythm_r.out",
+      "to": "master_r.b"
+    }
+  ],
+  "output": {
+    "left": "master_l.out",
+    "right": "master_r.out",
+    "gain": 0.72
+  }
+}

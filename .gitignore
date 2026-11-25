@@ -1,0 +1,10 @@
+/renders/*.wav
+/renders/*.dot
+/bin/
+*.test
+/node_modules/
+/dist/
+/.wrangler/
+.dev.vars*
+.env*
+*-deploy-token.env

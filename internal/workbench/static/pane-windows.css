@@ -1,0 +1,18 @@
+.pane > summary > .pane-window-button { flex: 0 0 auto; margin-left: auto; padding: 5px 10px; font-size: 11px; white-space: nowrap; }
+.pane > summary > .pane-meta + .pane-window-button { margin-left: 0; }
+.pane-window-button:focus-visible { outline: 2px solid var(--accent, #c3f47b); outline-offset: 2px; }
+.pane-window-placeholder { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 24px 18px; color: var(--muted, #a1b0aa); }
+.pane-window { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.pane-window-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--line, #354247); background: var(--panel, #1a2124); }
+.pane-window-title { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.pane-window-header .pane-window-button { flex-shrink: 0; }
+.pane-window-main { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; padding: 12px; }
+.pane-window-content { min-width: 0; height: auto; max-height: none; }
+/* Scroll the child's main region, not a cropped rack viewport. The measured
+   rack spacer retains its complete, zoom-adjusted natural height. */
+.pane-window .rack-view .rack-viewport { height: auto; max-height: none; min-height: 0; overflow: auto; }
+.pane-window .score-view .sv-arrangement { max-height: none; }
+@media (max-width: 650px) {
+  .pane > summary > .pane-window-button { padding: 5px 7px; font-size: 10px; }
+  .pane-window-main { padding: 6px; }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "pipe-go-doep",
+  "version": "0.1.0",
+  "description": "Modular Go chiptune synthesiser with a browser workbench and live WebAssembly playback",
+  "license": "GPL-3.0-or-later",
+  "repository": "github:aquarat/pipe-go-doep",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "test": "go test ./... && node --test internal/workbench/static/*.test.mjs worker/*.test.mjs",
+    "test:wasm": "node scripts/test-wasm.mjs",
+    "check": "npm test && npm run test:wasm && npm run build && wrangler deploy --dry-run",
+    "dev": "npm run build && wrangler dev --port 8797",
+    "deploy": "npm run build && wrangler deploy",
+    "verify:deployment": "node worker/verify-deployment.mjs",
+    "types": "wrangler types worker/env.d.ts --include-runtime=false"
+  },
+  "devDependencies": {
+    "wrangler": "4.166.0"
+  }
+}
