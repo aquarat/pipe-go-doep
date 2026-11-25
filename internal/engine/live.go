@@ -47,6 +47,10 @@ type Stream struct {
 	interval         int64
 	canonical        bool
 	ramp             *parameterRamp
+	probes           []Probe
+	resolved         []resolvedProbe
+	probeBuffer      []float32
+	probeFrames      int
 }
 
 func snapshotDocument(d *score.Document) (*score.Document, error) {
@@ -166,10 +170,12 @@ func (s *Stream) tick() (float64, float64, error) {
 
 // Read returns at most frames interleaved stereo float32 frames, clamped [-1,1].
 // Empty output at EOF is successful. Invalid block sizes do not advance state.
+// With probes installed, every produced frame is also recorded for ProbeData.
 func (s *Stream) Read(ctx context.Context, frames int) ([]float32, error) {
 	if frames < 1 || frames > MaxBlockFrames {
 		return nil, fmt.Errorf("frames must be in 1..%d", MaxBlockFrames)
 	}
+	s.probeFrames = 0
 	if remaining := s.frames - s.position; int64(frames) > remaining {
 		frames = int(remaining)
 	}
@@ -184,9 +190,13 @@ func (s *Stream) Read(ctx context.Context, frames int) ([]float32, error) {
 		if err != nil {
 			return nil, err
 		}
+		if len(s.resolved) != 0 {
+			s.captureProbes(i, left, right)
+		}
 		out[i*2] = float32(math.Max(-1, math.Min(1, left)))
 		out[i*2+1] = float32(math.Max(-1, math.Min(1, right)))
 	}
+	s.probeFrames = frames
 	return out, nil
 }
 
@@ -200,6 +210,7 @@ func (s *Stream) Seek(ctx context.Context, frame int64) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	s.probeFrames = 0
 	var nearest *checkpoint
 	for i := range s.checkpoints {
 		cp := &s.checkpoints[i]
@@ -267,7 +278,10 @@ func (s *Stream) Update(ctx context.Context, d *score.Document) error {
 		if err := replacement.Seek(ctx, frame); err != nil {
 			return err
 		}
+		replacement.probes, replacement.probeBuffer = s.probes, s.probeBuffer
+		replacement.resolved = make([]resolvedProbe, len(s.probes))
 		*s = *replacement
+		s.resolveProbes()
 		return nil
 	}
 	r := &parameterRamp{units: make([]unitRamp, len(s.patch.units)), fromGain: s.patch.gain, toGain: replacement.patch.gain, frames: int(math.Round(float64(s.SampleRate()) * .008))}
@@ -284,5 +298,7 @@ func (s *Stream) Update(ctx context.Context, d *score.Document) error {
 	s.checkpointBytes = 0
 	s.canonical = false
 	s.ramp = r
+	s.probeFrames = 0
+	s.resolveProbes()
 	return nil
 }

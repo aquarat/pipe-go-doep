@@ -49,6 +49,33 @@ not canonical history of the latest project, so it is not checkpointed. The next
 seek reconstructs the latest project from zero; canonical checkpointing resumes.
 Title/ID/UI metadata does not force graph reconstruction.
 
+## Oscilloscope probes
+
+`Stream.SetProbes([]Probe)` installs up to five probes, one per scope channel
+(`x`, `y1`..`y4`, unique). Each references a module port
+(`node`, `port`, `direction` `input`|`output`) or a stereo bus (`left`|`right`).
+The whole list is validated before anything changes; an empty list clears.
+References are resolved by node id and port name against the running patch.
+A missing node or port is not an error: the channel is reported by
+`Unresolved()` and reads `NaN`.
+
+Every frame produced by `Read` records one value per probe into a buffer
+allocated once by `SetProbes`, so capture adds no per-sample or per-block
+allocation. `ProbeData()` returns the last read's values interleaved per frame
+(`frames * len(probes)`), valid until the next `Read`, `Seek`, `Update` or
+`SetProbes` (each of which empties it; seeks produce no probe data).
+
+- Output probes read the value the module produced for that frame.
+- Input probes read the value the module consumed: the cabled signal, or the
+  base/default value including live 8 ms ramps.
+- Bus probes read the output after master gain and before the `[-1, 1]` clamp.
+
+Probes are observers only: PCM, checkpoints and offline WAV output are
+identical with or without them. They persist across `Seek` and both kinds of
+`Update`; structural updates re-resolve them against the new patch (so they
+follow node ids when indices change, and dangle when a node is deleted). A
+failed update leaves them untouched.
+
 ## Browser bridge
 
 `cmd/pipe-go-doep-wasm` retains `pipeGoDoepRequest` and adds synchronous
@@ -58,6 +85,17 @@ Title/ID/UI metadata does not force graph reconstruction.
 `Float32Array`, copied in bulk and safe to transfer without retaining a view into
 Go memory. Offline rendering is independent of the live engine. Both APIs use the
 same interactive limits: 2 MiB source, 48 kHz, 90 seconds including tail, 128 nodes.
+
+The bridge adds a `probe` action (see [`scope-contract.md`](scope-contract.md)):
+payload `{"probes":[{"channel":"y1","node":"lead","port":"out","direction":"output"},{"channel":"x","bus":"left"}]}`
+returns `{status:200, channels:[...], unresolved:[...]}`; malformed JSON, unknown
+fields, a missing or `null` `probes`, invalid channels/references, duplicate
+channels or more than five probes return 400 and change nothing. The accepted
+list belongs to the worker, not one stream: `open`, `update` and `close` keep it,
+and `open`/`update` results include `unresolved`. With no open stream the list is
+stored and node probes are reported unresolved. While probes are set, `read`
+also returns `channels`, `unresolved` and `probe`, a JS-owned `Float32Array` of
+`frames * channels.length` values copied out of Go memory like `body`.
 
 ## Verification
 
@@ -69,4 +107,7 @@ Tests cover exact block/sample scheduler parity and WAV quantization, stereo
 effects/noise/sequence/envelope state, repeated forward/backward seeks across
 checkpoint eviction and delay wraps, parameter ramps/retargeting without phase
 reset, atomic invalid updates, equivalent-time replacements, delay-memory caps,
-all DSP clone types, and the actual WASM bridge lifecycle/typed buffers.
+all DSP clone types, probe values against independently computed module
+inputs/outputs and pre-clamp bus values, probes across seeks and both update
+kinds, dangling probes, atomic invalid probe lists, zero added allocations, and
+the actual WASM bridge lifecycle/typed buffers including `probe`.

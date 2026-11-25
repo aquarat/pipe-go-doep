@@ -49,7 +49,76 @@ type Document struct {
 // TreeExpanded contains JSON Pointers; the empty string identifies the root.
 // Missing paths (including when UIState is absent) are collapsed by default.
 type UIState struct {
-	TreeExpanded []string `json:"tree_expanded,omitempty"`
+	TreeExpanded []string    `json:"tree_expanded,omitempty"`
+	Scope        *ScopeState `json:"scope,omitempty"`
+}
+
+// ScopeChannels lists the oscilloscope inputs in display order.
+var ScopeChannels = []string{"x", "y1", "y2", "y3", "y4"}
+
+// ScopeState is the oscilloscope patch: an optional display mode ("yt" or
+// "xy"; empty means absent) and probe cables keyed by scope channel. Probes
+// may reference nodes or ports that do not exist; they are dangling, not
+// invalid, so deleting a module never invalidates a saved project.
+type ScopeState struct {
+	Mode   string              `json:"mode,omitempty"`
+	Inputs map[string]ProbeRef `json:"inputs,omitempty"`
+}
+
+// ProbeRef names one observed signal: either a module port
+// (Node, Port, Direction "input"|"output") or a stereo output Bus
+// ("left"|"right", after master gain and before clamping).
+type ProbeRef struct {
+	Node      string `json:"node,omitempty"`
+	Port      string `json:"port,omitempty"`
+	Direction string `json:"direction,omitempty"`
+	Bus       string `json:"bus,omitempty"`
+}
+
+// ValidScopeChannel reports whether name is one of ScopeChannels.
+func ValidScopeChannel(name string) bool {
+	for _, c := range ScopeChannels {
+		if c == name {
+			return true
+		}
+	}
+	return false
+}
+
+// Validate checks the reference's shape only; it does not require the node
+// or port to exist.
+func (r ProbeRef) Validate() error {
+	if r.Bus != "" {
+		if r.Node != "" || r.Port != "" || r.Direction != "" {
+			return fmt.Errorf("bus probe must not also name node, port or direction")
+		}
+		if r.Bus != "left" && r.Bus != "right" {
+			return fmt.Errorf("bus must be \"left\" or \"right\"")
+		}
+		return nil
+	}
+	if !identifier.MatchString(r.Node) || !identifier.MatchString(r.Port) {
+		return fmt.Errorf("probe requires a valid node and port, or a bus")
+	}
+	if r.Direction != "input" && r.Direction != "output" {
+		return fmt.Errorf("probe direction must be \"input\" or \"output\"")
+	}
+	return nil
+}
+
+func (s *ScopeState) validate() error {
+	if s.Mode != "" && s.Mode != "yt" && s.Mode != "xy" {
+		return fmt.Errorf("_ui.scope.mode must be \"yt\" or \"xy\"")
+	}
+	for channel, ref := range s.Inputs {
+		if !ValidScopeChannel(channel) {
+			return fmt.Errorf("_ui.scope.inputs has unknown channel %q (use x, y1..y4)", channel)
+		}
+		if err := ref.Validate(); err != nil {
+			return fmt.Errorf("_ui.scope.inputs.%s: %w", channel, err)
+		}
+	}
+	return nil
 }
 
 type Track struct {
@@ -188,6 +257,11 @@ func (d *Document) Validate() error {
 				return fmt.Errorf("_ui.tree_expanded[%d] duplicates a path", i)
 			}
 			seen[path] = true
+		}
+		if d.UI.Scope != nil {
+			if err := d.UI.Scope.validate(); err != nil {
+				return err
+			}
 		}
 	}
 	if len(d.Title) > 1024 {

@@ -22,9 +22,10 @@ test('project identity, panes, tree state and musical views integrate', { timeou
     const a = await project();
     assert.match(a.id, /^[a-f0-9-]{36}$/);
     assert.equal(await page.locator('#json-pane').getAttribute('open'), null);
-    assert.equal(await page.locator('.rack-module').count(), a.nodes.length + 1);
-    assert.equal(await page.locator('.rack-cable').count(), a.connections.length + 2);
-    assert.equal(await page.locator('.rack-function-icon').count(), a.nodes.length + 1);
+    assert.equal(await page.locator('.rack-module:not([data-module-type="scope"])').count(), a.nodes.length + 1);
+    assert.equal(await page.locator('.rack-module[data-module-type="scope"] .rack-scope-jack').count(), 5);
+    assert.equal(await page.locator('.rack-cable:not(.is-ghost)').count(), a.connections.length + 2);
+    assert.equal(await page.locator('.rack-module:not([data-module-type="scope"]) .rack-function-icon').count(), a.nodes.length + 1);
 
     await page.locator('#json-pane > summary').click();
     assert.equal(await page.locator('#json-tree .tree-row').count(), 1);
@@ -120,8 +121,11 @@ test('rack edits and reconnections share one project across real pane windows', 
       connections: [{ from: 'osc.out', to: 'amp.in' }, { from: 'osc.out', to: 'mix.a' }],
       output: { left: 'amp.out', right: 'mix.out', gain: .1 },
     };
-    await page.route('**/api/example?*', route => route.fulfill({ json: fixture }));
+    // Open the fixture as a file: Playwright request interception would stop
+    // pop-out windows from loading their stylesheets.
     await page.goto(url);
+    await page.waitForFunction(() => document.querySelector('#title').textContent === 'Lantern Duel');
+    await page.locator('#file').setInputFiles({ name: 'gesture-check.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(fixture)) });
     await page.waitForFunction(() => document.querySelector('#title').textContent === 'Gesture check');
     let sourceHost = page;
     const project = async () => JSON.parse(await sourceHost.locator('#editor').inputValue());

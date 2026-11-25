@@ -37,7 +37,14 @@ The rack shows module controls, type icons, mixer gains and actual patch cables.
 Drag a control vertically to adjust it (Shift for fine changes), or click it to
 reveal its exact JSON value. Omitted defaults are made explicit when the project
 opens. Cable endpoints can be dragged to compatible jacks to reconnect routing.
-The rack fills the pane width and grows vertically to show all module instances.
+Modules are sized to their controls, and every cable carries a label along its
+path saying what it connects. The rack wraps to show all module instances.
+
+The rack's **oscilloscope** watches any jack while the live synth plays. Drag
+from one of its X/Y1–Y4 jacks to a module jack (input or output) or to the stereo
+output. YT mode plots up to four signals against time with an edge trigger; XY
+mode plots each Y input against X. Probes are saved in the project's `_ui`
+metadata and never change the sound.
 
 Each main pane has **Pop out / Pop in** controls. Detached panes remain connected
 to the same project; closing their window returns the content to the workbench.

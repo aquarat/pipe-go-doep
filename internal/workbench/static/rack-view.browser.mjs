@@ -8,20 +8,23 @@ const js = (await readFile(new URL('./rack-view.js', import.meta.url), 'utf8')).
 const css = await readFile(new URL('./rack-view.css', import.meta.url), 'utf8');
 const fixture = name => readFile(new URL(`../../../examples/${name}.json`, import.meta.url), 'utf8').then(JSON.parse);
 
-async function setup(t, project, width = 1200) {
+async function setup(t, project, width = 1200, { scope = false } = {}) {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH }); t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width, height: 900 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.setContent('<style>body{margin:0;background:#10171b} main{width:100%;min-width:0}</style><main></main>');
   await page.addStyleTag({ content: css });
-  await page.evaluate(async ({ source, project }) => {
+  await page.evaluate(async ({ source, project, scope }) => {
     const { createRackView } = await import(`data:text/javascript;base64,${source}`);
+    window.probes = []; window.screenElement = null;
+    if (scope) { window.screenElement = document.createElement('div'); window.screenElement.className = 'test-scope'; window.screenElement.append(document.createElement('canvas')); }
     window.changes = []; window.reveals = []; window.edits = []; window.parameterReveals = []; window.reconnects = []; window.gestureErrors = [];
     window.accept = false; window.rebuild = false; window.capturedAtCommit = false;
     window.previews = []; window.cancels = []; window.parameterEvents = []; window.capturedAtCancel = false;
     const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
     window.project = freeze(project);
     window.rack = createRackView(document.querySelector('main'), {
+      ...(scope ? { scopeScreen: window.screenElement, onProbe: async x => { window.probes.push(x); if (window.rebuild) window.rack.setProject(window.project); return window.accept; } } : {}),
       onStateChange: x => window.changes.push(x), onReveal: x => window.reveals.push(x),
       onRevealParameter: x => window.parameterReveals.push(x), onError: x => window.gestureErrors.push(x),
       onPreviewParameter: x => { window.previews.push(x); window.parameterEvents.push('preview'); },
@@ -39,7 +42,7 @@ async function setup(t, project, width = 1200) {
     });
     window.rack.setProject(window.project);
     await new Promise(requestAnimationFrame);
-  }, { source: Buffer.from(js).toString('base64'), project });
+  }, { source: Buffer.from(js).toString('base64'), project, scope });
   t.after(() => assert.deepEqual(errors, []));
   return page;
 }
@@ -214,7 +217,9 @@ test('pending previews are coalesced and cannot run after commit, pointercancel 
 
 test('full-width fractional rack, full height, narrow zoom scroll and adopted popup controls', async t => {
   const page = await setup(t, smallPatch, 2400);
-  assert.equal(await page.locator('.rack-module-grid').evaluate(grid => Math.abs(grid.lastElementChild.getBoundingClientRect().right - grid.getBoundingClientRect().right + 3.2) < 2), true);
+  // Modules keep their HP width instead of stretching; the rails still span the pane.
+  assert.equal(await page.locator('.rack-module-grid').evaluate(grid => Math.abs(grid.getBoundingClientRect().right - grid.closest('.rack-rows').getBoundingClientRect().right) < 2), true);
+  assert.equal(await page.locator('.rack-module').evaluateAll(cards => cards.every(card => card.offsetWidth === Number(card.dataset.hp) * 15)), true);
   assert.equal(await page.locator('.rack-viewport').evaluate(el => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1), true);
   await page.setViewportSize({ width: 320, height: 700 }); await page.getByLabel('Rack zoom', { exact: true }).selectOption('1.5');
   await page.evaluate(() => new Promise(requestAnimationFrame));
@@ -272,4 +277,179 @@ test('materialized signal defaults stay compact and input jacks reveal exact par
   assert.deepEqual(await page.evaluate(() => window.reveals), []);
   await page.locator('.rack-family-output .rack-jack[data-port="left"]').focus(); await page.keyboard.press('Enter');
   assert.deepEqual(await page.evaluate(() => window.reveals), ['/output/left']);
+});
+
+// Every visible cable starts and ends inside a jack ring, at the current zoom.
+const endpointsInRings = page => page.evaluate(() => {
+  const canvas = document.querySelector('.rack-canvas'), origin = canvas.getBoundingClientRect(), scale = origin.width / canvas.offsetWidth;
+  const rings = [...document.querySelectorAll('.rack-jack-ring')].map(ring => ring.getBoundingClientRect());
+  const inside = (x, y) => rings.some(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+  const wires = [...document.querySelectorAll('.rack-cable:not(.is-ghost)')].filter(g => g.style.display !== 'none').map(g => g.querySelector('.rack-cable-wire'));
+  return wires.length > 0 && wires.every(wire => {
+    const parts = wire.getAttribute('d').split(' ').map(Number);
+    return inside(origin.left + parts[1] * scale, origin.top + parts[2] * scale) && inside(origin.left + parts.at(-2) * scale, origin.top + parts.at(-1) * scale);
+  });
+});
+const labelReport = page => page.evaluate(() => [...document.querySelectorAll('.rack-cable:not(.is-ghost)')].filter(g => g.style.display !== 'none').map(group => {
+  const label = group.querySelector('.rack-cable-label'), path = group.querySelector('.rack-cable-label-path'), text = label.textContent;
+  const visible = label.dataset.fit !== 'hidden', last = text.length - 1;
+  return {
+    fit: label.dataset.fit, text, pointer: getComputedStyle(label).pointerEvents,
+    room: path.getTotalLength() - 26, width: visible ? label.getComputedTextLength() : 0,
+    upright: !visible || label.getStartPositionOfChar(0).x <= label.getEndPositionOfChar(last).x,
+    offset: Number(label.querySelector('textPath').getAttribute('startOffset')),
+  };
+}));
+
+test('compact HP modules are much denser and keep endpoints accurate after zoom', async t => {
+  const page = await setup(t, await fixture('neon-dojo'));
+  const widths = await page.locator('.rack-module').evaluateAll(cards => cards.map(card => ({ type: card.dataset.moduleType, hp: Number(card.dataset.hp), width: card.offsetWidth, height: card.offsetHeight })));
+  // The previous fixed faceplates were at least 210 px wide and 350 px tall.
+  for (const card of widths) {
+    assert.equal(card.width, card.hp * 15);
+    assert.ok(card.width < 210 && card.height < 350, JSON.stringify(card));
+  }
+  assert.ok(widths.filter(card => card.type === 'vca').every(card => card.width <= 105));
+  assert.ok(widths.find(card => card.type === 'mixer').hp > widths.find(card => card.type === 'vca').hp);
+  const rowsHeight = await page.locator('.rack-rows').evaluate(el => el.offsetHeight);
+  assert.ok(rowsHeight < 5000, `rack height ${rowsHeight}`);
+  assert.equal(await endpointsInRings(page), true);
+  for (const zoom of ['1.5', '0.5']) {
+    await page.getByLabel('Rack zoom', { exact: true }).selectOption(zoom);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    assert.equal(await endpointsInRings(page), true, `zoom ${zoom}`);
+  }
+});
+
+test('cable labels follow every cable upright, fitted, staggered and pointer-transparent', async t => {
+  const project = await fixture('neon-dojo'), page = await setup(t, project);
+  const labels = await labelReport(page);
+  assert.equal(labels.length, project.connections.length + 2);
+  assert.ok(labels.filter(l => l.fit === 'full').length > 20);
+  for (const l of labels) {
+    assert.equal(l.pointer, 'none');
+    assert.ok(['full', 'short', 'hidden'].includes(l.fit));
+    assert.ok(l.upright, l.text);
+    if (l.fit !== 'hidden') assert.ok(l.width <= l.room + .5 && l.offset >= 12.9, JSON.stringify(l));
+    if (l.fit === 'full') assert.match(l.text, /^\S+ \S+ \[[^\]]+\] → (\S+ \S+|[LR]) \[[^\]]+\]$/);
+    if (l.fit === 'short') assert.match(l.text, /^\S+ \S+ → (\S+ \S+|[LR])$/);
+  }
+  // Right-to-left cables reverse the label path rather than drawing upside down.
+  assert.ok(await page.locator('.rack-cable-label[data-reversed="true"]:not([data-fit="hidden"])').count() > 0);
+  assert.ok(new Set(labels.filter(l => l.fit !== 'hidden').map(l => Math.round(l.offset / Math.max(1, l.room) * 10))).size > 2, 'labels are staggered');
+  const small = await setup(t, smallPatch);
+  const texts = await small.locator('.rack-cable-label').allTextContents();
+  assert.ok(texts.includes('out osc [Sine oscillator] → in amp [Voltage amplifier]') || texts.includes('out osc → in amp'));
+  assert.ok(texts.includes('out mix [Four-channel mixer] → R [Stereo output]') || texts.includes('out mix → R'));
+  assert.ok((await labelReport(small)).every(l => l.upright));
+  await small.locator('.rack-cable-hit').first().focus(); await small.keyboard.press('Enter');
+  assert.equal(await small.locator('.rack-cable.is-cable-selected').evaluate(g => getComputedStyle(g).opacity), '1');
+  assert.equal(await small.locator('.rack-cable.is-dimmed').first().evaluate(g => Number(getComputedStyle(g).opacity) < .1), true);
+});
+
+const scopePatch = {
+  ...smallPatch,
+  _ui: { scope: { mode: 'yt', inputs: { y1: { node: 'osc', port: 'out', direction: 'output' }, x: { bus: 'left' }, y3: { node: 'ghost', port: 'out', direction: 'output' } } } },
+};
+test('oscilloscope faceplate keeps its screen, draws probe cables and lists dangling probes', async t => {
+  const plain = await setup(t, scopePatch);
+  assert.equal(await plain.locator('.rack-family-scope, .rack-cable.is-probe').count(), 0);
+  const page = await setup(t, scopePatch, 1200, { scope: true });
+  const scope = page.locator('.rack-module').first();
+  assert.equal(await scope.getAttribute('data-node-key'), '$rack-scope');
+  assert.ok(await scope.evaluate(card => card.offsetWidth > 2 * document.querySelector('[data-module-type="vca"]').offsetWidth));
+  assert.equal(await page.evaluate(() => document.querySelector('.rack-scope-screen > *') === window.screenElement), true);
+  assert.deepEqual(await scope.locator('.rack-scope-jack').evaluateAll(jacks => jacks.map(j => j.dataset.channel)), ['x', 'y1', 'y2', 'y3', 'y4']);
+  assert.match(await scope.locator('.rack-scope-jack[data-channel="x"]').textContent(), /XY mode/);
+  const probes = page.locator('.rack-cable.is-probe:not(.is-ghost)');
+  assert.equal(await probes.count(), 3);
+  assert.equal(await page.locator('.rack-cable.is-probe:not(.is-ghost):not([style*="display: none"])').count(), 2);
+  assert.notEqual(await probes.first().locator('.rack-cable-wire').evaluate(w => getComputedStyle(w).strokeDasharray), 'none');
+  const y1 = page.locator('.rack-cable.is-probe[data-channel="y1"] .rack-cable-label');
+  assert.ok(['out osc [Sine oscillator] → Y1 [Oscilloscope]', 'out osc → Y1'].includes(await y1.textContent()));
+  assert.ok(['L [Stereo output] → X [Oscilloscope]', 'L → X'].includes(await page.locator('.rack-cable.is-probe[data-channel="x"] .rack-cable-label').textContent()));
+  assert.equal(await endpointsInRings(page), true);
+  const ends = await page.evaluate(() => {
+    const canvas = document.querySelector('.rack-canvas'), o = canvas.getBoundingClientRect(), s = o.width / canvas.offsetWidth;
+    const d = document.querySelector('.rack-cable.is-probe[data-channel="y1"] .rack-cable-wire').getAttribute('d').split(' ').map(Number);
+    const at = sel => { const r = document.querySelector(sel).getBoundingClientRect(); return [(r.left + r.width / 2 - o.left) / s, (r.top + r.height / 2 - o.top) / s]; };
+    return { d: [d[1], d[2], d.at(-2), d.at(-1)], from: at('[data-node-key="node:0"] [data-direction="output"] .rack-jack-ring'), to: at('.rack-scope-jack[data-channel="y1"] .rack-jack-ring') };
+  });
+  assert.ok(Math.hypot(ends.d[0] - ends.from[0], ends.d[1] - ends.from[1]) < .5 && Math.hypot(ends.d[2] - ends.to[0], ends.d[3] - ends.to[1]) < .5, JSON.stringify(ends));
+  assert.match(await page.locator('.rack-summary').textContent(), /3\/5 scope probes · 1 unresolved probes/);
+  assert.match(await page.locator('.rack-unresolved').textContent(), /ghost\.out/);
+  assert.match(await page.locator('.rack-scope-jack[data-channel="y3"]').textContent(), /unresolved/);
+  await page.locator('.rack-unresolved summary').click();
+  await page.getByRole('button', { name: 'Unplug Y3', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => window.probes), [{ channel: 'y3', ref: null }]);
+  await page.evaluate(() => window.rack.setProject({ ...window.project, _ui: { scope: { mode: 'xy', inputs: {} } } }));
+  assert.doesNotMatch(await page.locator('.rack-scope-jack[data-channel="x"]').textContent(), /XY mode/);
+  assert.equal(await page.evaluate(() => document.querySelector('.rack-scope-screen > *') === window.screenElement), true);
+  assert.equal(await page.locator('.rack-cable.is-probe:not(.is-ghost)').count(), 0);
+});
+
+test('probe gestures patch, repatch, unplug and cancel through onProbe only', async t => {
+  const page = await setup(t, scopePatch, 1200, { scope: true });
+  const jack = (key, direction, port) => page.locator(`.rack-module[data-node-key="${key}"] .rack-jack[data-direction="${direction}"][data-port="${port}"]`);
+  const pointerDrag = async (from, to, { cancel = false } = {}) => {
+    await from.scrollIntoViewIfNeeded(); const a = await from.boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+    const b = typeof to.boundingBox === 'function' ? await to.boundingBox() : to;
+    await page.mouse.move(b.x + (b.width || 0) / 2, b.y + (b.height || 0) / 2, { steps: 8 });
+    if (!cancel) {
+      assert.ok(await page.locator('.rack-jack.is-probe-target').count() > 10);
+      assert.equal(await page.locator('.rack-scope-jack.is-drop-target').count(), 0);
+    }
+    if (cancel) await page.keyboard.press('Escape');
+    await page.mouse.up();
+  };
+  const y2 = page.locator('.rack-scope-jack[data-channel="y2"]'), y4 = page.locator('.rack-scope-jack[data-channel="y4"]');
+  // A new probe shows a ghost cable from the pointer to the scope while dragging.
+  await y2.scrollIntoViewIfNeeded(); const box = await y2.boundingBox();
+  await page.mouse.move(box.x + 10, box.y + 10); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 300, { steps: 5 });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await page.locator('.rack-cable.is-ghost').evaluate(g => g.style.display), '');
+  await page.keyboard.press('Escape'); await page.mouse.up(); await page.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await page.locator('.rack-cable.is-ghost').evaluate(g => g.style.display), 'none');
+  await pointerDrag(y2, jack('node:2', 'input', 'gain'));
+  await pointerDrag(y4, jack('$rack-output', 'input', 'right'));
+  await pointerDrag(y4, jack('node:3', 'output', 'out'), { cancel: true });
+  assert.deepEqual(await page.evaluate(() => window.probes), [
+    { channel: 'y2', ref: { node: 'amp', port: 'gain', direction: 'input' } },
+    { channel: 'y4', ref: { bus: 'right' } },
+  ]);
+  // Clicking a patched scope jack selects its probe; its module plug can be repatched.
+  await page.locator('.rack-scope-jack[data-channel="y1"]').click();
+  assert.equal(await page.locator('.rack-cable.is-cable-selected').getAttribute('data-channel'), 'y1');
+  assert.equal(await page.locator('.is-cable-selected .rack-cable-end').count(), 1);
+  await page.evaluate(() => { window.rebuild = true; });
+  await pointerDrag(page.locator('.is-cable-selected .rack-cable-end'), jack('node:1', 'output', 'out'));
+  assert.deepEqual(await page.evaluate(() => window.probes.at(-1)), { channel: 'y1', ref: { node: 'other', port: 'out', direction: 'output' } });
+  // Dropping a selected probe plug on empty rack space unplugs it.
+  await page.locator('.rack-scope-jack[data-channel="y1"]').click();
+  await pointerDrag(page.locator('.is-cable-selected .rack-cable-end'), page.locator('.rack-row-title').first());
+  assert.deepEqual(await page.evaluate(() => window.probes.at(-1)), { channel: 'y1', ref: null });
+  // Same jack: no change. Unplugged scope jack dropped on empty space: no change.
+  const count = await page.evaluate(() => window.probes.length);
+  await page.locator('.rack-scope-jack[data-channel="y1"]').click();
+  await pointerDrag(page.locator('.is-cable-selected .rack-cable-end'), jack('node:0', 'output', 'out'));
+  await pointerDrag(y2, page.locator('.rack-row-title').first());
+  assert.equal(await page.evaluate(() => window.probes.length), count);
+  // Keyboard: select the bus probe cable, then Delete unplugs it.
+  await page.getByRole('button', { name: 'Select probe: output.left → scope.x', exact: true }).focus(); await page.keyboard.press('Enter');
+  assert.match(await page.locator('.rack-details').textContent(), /L \[Stereo output\] → X \[Oscilloscope\]/);
+  await page.keyboard.press('Delete');
+  assert.deepEqual(await page.evaluate(() => window.probes.at(-1)), { channel: 'x', ref: null });
+  await page.getByRole('button', { name: 'Select probe: output.left → scope.x', exact: true }).focus(); await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Unplug X', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => window.probes.at(-1)), { channel: 'x', ref: null });
+  assert.deepEqual(await page.evaluate(() => window.project._ui.scope.inputs.y1), { node: 'osc', port: 'out', direction: 'output' });
+  assert.equal(await page.evaluate(() => window.reconnects.length), 0);
+  // Patch cables still reconnect normally beside the scope.
+  await page.getByRole('button', { name: 'Select cable: amp.out → output.left', exact: true }).focus(); await page.keyboard.press('Enter');
+  const handle = await page.locator('.is-cable-selected .rack-cable-end').boundingBox(), other = await jack('node:1', 'output', 'out').boundingBox();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
+  assert.equal(await page.locator('.rack-scope-jack.is-drop-target, .rack-jack.is-probe-target').count(), 0);
+  await page.mouse.move(other.x + other.width / 2, other.y + other.height / 2, { steps: 6 }); await page.mouse.up();
+  assert.deepEqual(await page.evaluate(() => window.reconnects), [{ outputChannel: 'left', end: 'from', ref: 'other.out' }]);
 });

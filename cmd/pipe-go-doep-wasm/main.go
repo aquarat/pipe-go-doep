@@ -24,6 +24,10 @@ const maxJSONBytes = 2 << 20
 
 var live *engine.Stream
 
+// probes is the worker's last accepted probe list. It outlives individual
+// streams so open/update/close never drop the oscilloscope patch.
+var probes []engine.Probe
+
 func interactiveDocument(source string) (*score.Document, error) {
 	if len(source) > maxJSONBytes {
 		return nil, fmt.Errorf("workbench limit: 2097152 JSON bytes")
@@ -96,6 +100,45 @@ func decodeControl(source string, target any) error {
 	return nil
 }
 
+// float32Array copies values into a JS-owned Float32Array in one bulk copy; no
+// view into Go memory survives the call, so the worker may transfer it.
+func float32Array(values []float32) js.Value {
+	encoded := make([]byte, len(values)*4)
+	for i, sample := range values {
+		binary.LittleEndian.PutUint32(encoded[i*4:], math.Float32bits(sample))
+	}
+	array := js.Global().Get("Float32Array").New(len(values))
+	js.CopyBytesToJS(js.Global().Get("Uint8Array").New(array.Get("buffer")), encoded)
+	return array
+}
+
+func stringList(values []string) []any {
+	out := make([]any, len(values))
+	for i, v := range values {
+		out[i] = v
+	}
+	return out
+}
+
+func probeChannels() []any {
+	out := make([]any, len(probes))
+	for i, p := range probes {
+		out[i] = p.Channel
+	}
+	return out
+}
+
+// unresolvedWithoutStream reports node probes as unresolved: there is no patch.
+func unresolvedWithoutStream() []string {
+	out := []string{}
+	for _, p := range probes {
+		if p.Bus == "" {
+			out = append(out, p.Channel)
+		}
+	}
+	return out
+}
+
 func stream(_ js.Value, args []js.Value) (result any) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -128,11 +171,40 @@ func stream(_ js.Value, args []js.Value) (result any) {
 			if err != nil {
 				return failure(400, err.Error())
 			}
+			if _, err := next.SetProbes(probes); err != nil {
+				return failure(500, err.Error())
+			}
 			live = next
 		} else if err := live.Update(ctx, d); err != nil {
 			return failure(400, err.Error())
 		}
-		return map[string]any{"status": 200, "sampleRate": live.SampleRate(), "frames": live.Frames(), "position": live.Position()}
+		return map[string]any{"status": 200, "sampleRate": live.SampleRate(), "frames": live.Frames(), "position": live.Position(), "unresolved": stringList(live.Unresolved())}
+	case "probe":
+		var payload struct {
+			Probes *[]engine.Probe `json:"probes"`
+		}
+		if err := decodeControl(source, &payload); err != nil {
+			return failure(400, err.Error())
+		}
+		if payload.Probes == nil {
+			return failure(400, "probes is required")
+		}
+		next := *payload.Probes
+		if err := engine.ValidateProbes(next); err != nil {
+			return failure(400, err.Error())
+		}
+		var unresolved []string
+		if live != nil {
+			var err error
+			if unresolved, err = live.SetProbes(next); err != nil {
+				return failure(400, err.Error())
+			}
+		}
+		probes = append([]engine.Probe(nil), next...)
+		if live == nil {
+			unresolved = unresolvedWithoutStream()
+		}
+		return map[string]any{"status": 200, "channels": probeChannels(), "unresolved": stringList(unresolved)}
 	case "read":
 		if live == nil {
 			return failure(409, "no open stream")
@@ -151,16 +223,13 @@ func stream(_ js.Value, args []js.Value) (result any) {
 		if err != nil {
 			return failure(400, err.Error())
 		}
-		// One bulk copy into a JS-owned buffer; no Go-memory view survives this
-		// callback, and the worker can safely transfer the ArrayBuffer.
-		encoded := make([]byte, len(pcm)*4)
-		for i, sample := range pcm {
-			binary.LittleEndian.PutUint32(encoded[i*4:], math.Float32bits(sample))
+		result := map[string]any{"status": 200, "sampleRate": live.SampleRate(), "position": position, "frames": len(pcm) / 2, "done": live.Position() == live.Frames(), "body": float32Array(pcm)}
+		if len(probes) != 0 {
+			result["channels"] = probeChannels()
+			result["probe"] = float32Array(live.ProbeData())
+			result["unresolved"] = stringList(live.Unresolved())
 		}
-		body := js.Global().Get("Float32Array").New(len(pcm))
-		view := js.Global().Get("Uint8Array").New(body.Get("buffer"))
-		js.CopyBytesToJS(view, encoded)
-		return map[string]any{"status": 200, "sampleRate": live.SampleRate(), "position": position, "frames": len(pcm) / 2, "done": live.Position() == live.Frames(), "body": body}
+		return result
 	case "seek":
 		if live == nil {
 			return failure(409, "no open stream")

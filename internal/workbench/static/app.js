@@ -4,6 +4,8 @@ import { createJSONTree } from './json-tree.js';
 import { createPaneWindows } from './pane-windows.js';
 import { synthRequest } from './render-client.js';
 import { createTransportUI } from './transport-ui.js';
+import { createScopeView } from './scope-view.js';
+import { probeList, probeLabels, scopeState, setProbe, setScopeMode } from './scope-model.js';
 import { materializeDefaults, editParameter, reconnectProject } from './rack-model.js';
 import {
   prepareProject, atPointer, setPointer, soundSignature, readProjectState, storeProjectState,
@@ -109,7 +111,31 @@ const scoreView = createScoreView($('score-view'), {
   onSeek: seconds => transport?.seek(seconds),
   onScrub: (seconds, gesture) => transport?.scrub(seconds, gesture),
 });
+// The scope screen element is re-parented into the rack's scope faceplate on
+// every rack render, so its canvas and trace history survive rebuilds.
+const scopeScreen = document.createElement('div');
+scopeScreen.className = 'scope-host';
+const scopeView = createScopeView(scopeScreen, {
+  getPosition: () => transport?.scopePosition() ?? { frame: 0, sampleRate: 44100, playing: false, live: false },
+  onStateChange: patch => persistView('scope', patch),
+  onModeChange: mode => editScope(current => setScopeMode(current, mode), `Oscilloscope set to ${mode.toUpperCase()} mode.`),
+});
+function editScope(change, message) {
+  if (!project || !allowVisualEdit()) return false;
+  try {
+    // Scope patching is _ui metadata: the sound signature and live engine are unchanged.
+    project = change(project); syncProject();
+    if (message) status(message, 'success');
+    return true;
+  } catch (e) { status(e.message, 'error'); return false; }
+}
+
 const rackView = createRackView($('rack-view'), {
+  scopeScreen,
+  onProbe({ channel, ref }) {
+    return editScope(current => setProbe(current, channel, ref),
+      ref ? `${channel.toUpperCase()} now probes ${probeLabels(setProbe(project, channel, ref))[channel]}.` : `${channel.toUpperCase()} unplugged.`);
+  },
   onStateChange: patch => persistView('rack', patch), onReveal: reveal,
   onRevealParameter({ nodeIndex, name }) {
     if (!project) return;
@@ -168,10 +194,11 @@ transport = createTransportUI($('transport'), {
   onStateChange: patch => persistView('transport', patch),
   canPlay: () => !!project && allowVisualEdit(),
   renderedMatches: () => rendered?.id === project?.id && rendered.signature === currentSignature,
+  onProbe: block => scopeView.push(block), onProbeReset: () => scopeView.reset(),
 });
 
 function refreshPane(name) {
-  if (name === 'rack') rackView.refreshLayout();
+  if (name === 'rack') { rackView.refreshLayout(); scopeView.refresh(); }
   if (name === 'score') {
     scoreView.refreshLayout();
   }
@@ -231,6 +258,9 @@ function syncProject({ redrawTree = true } = {}) {
   scoreView.setProject(project, browserState.score || {});
   rackView.setProject(project, browserState.rack || {});
   transport?.setProject(project, browserState.transport || {});
+  const scope = scopeState(project);
+  transport?.setProbes(probeList(project));
+  scopeView.setInputs({ ...scope, labels: probeLabels(project), unresolved: [] });
   markRenderState(); updateSourceStatus(); saveDraft();
 }
 
@@ -257,6 +287,7 @@ function openProject(value, { restoreDraft = false, fallbackID } = {}) {
   }
   if (project?.id !== next.id) { paneWindows?.dockAll(); clearAudio(); }
   project = next; browserState = saved;
+  scopeView.setView(browserState.scope || {});
   sourceDirty = restoreDraft && typeof saved.sourceDraft === 'string';
   sourceDraft = sourceDirty ? saved.sourceDraft : '';
   editor.value = sourceDirty ? sourceDraft : serialise();

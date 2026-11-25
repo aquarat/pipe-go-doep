@@ -14,16 +14,19 @@
 .rack-view .rack-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; background: #151d22; font-size: 10px; color: #b3c1ca; }
 .rack-view .rack-legend > span { display: inline-flex; align-items: center; gap: 5px; text-transform: uppercase; letter-spacing: .07em; }
 .rack-view .rack-legend > span::before { content: ''; height: 3px; width: 14px; border-radius: 2px; background: var(--signal); }
+.rack-view .rack-legend > .rack-legend-probe::before { background: repeating-linear-gradient(90deg, var(--signal) 0 5px, transparent 5px 8px); }
 .rack-view .rack-legend small { margin-left: auto; font-size: 10px; color: #8799a4; }
 .rack-view .rack-viewport { position: relative; width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-color: #65757a #131a1e; background: radial-gradient(ellipse at top, #28343a, #0d1216 75%); isolation: isolate; }
 .rack-view .rack-spacer { position: relative; overflow: hidden; min-width: 100%; }
 .rack-view .rack-canvas { position: absolute; left: 0; top: 0; transform-origin: left top; padding: 0 28px 48px; background: repeating-linear-gradient(90deg, #413325 0, #594431 3px, #382b21 5px, #413325 8px); }
-.rack-view .rack-rows { position: relative; background: #151d22; padding: 1px 0; box-shadow: 0 0 10px #000a; }
-.rack-view .rack-row { position: relative; padding: 0 0 28px; }
+.rack-view .rack-rows { position: relative; display: flex; flex-wrap: wrap; align-items: stretch; background: #151d22; padding: 1px 0; box-shadow: 0 0 10px #000a; }
+.rack-view .rack-row { position: relative; display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; max-width: 100%; padding: 0 0 28px; box-shadow: inset -2px 0 #0a0f12, inset -3px 0 #2c373e; }
+.rack-view .rack-row > .rack-module-grid { flex: 1; }
+.rack-view .rack-empty { flex: 1 0 100%; }
 .rack-view .rack-row-title { margin: 0; padding: 12px 16px 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #b6c5cb; font: 600 12px/1.4 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .13em; overflow-wrap: anywhere; background: linear-gradient(#38434a 0, #192127 3px, #202a31 90%, #080d11 92%, #465159 96%, #111a20); }
 .rack-view .rack-row-title small { font: 10px/1.2 ui-monospace, monospace; letter-spacing: 0; color: #8e9da6; flex-shrink: 0; text-transform: none; }
-.rack-view .rack-module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px 8px; padding: 6px 4px 8px; background: repeating-linear-gradient(0deg, #162026 0, #162026 8px, #1a252d 9px, #11191f 10px); }
-.rack-view .rack-module { --module-accent: #a6bbc8; position: relative; display: flex; flex-direction: column; min-height: 350px; padding: 17px 10px 20px; border: 1px solid #697680; border-bottom-color: #10171c; border-radius: 3px; background: linear-gradient(100deg, #343f47, #414b52 45%, #303c43); box-shadow: inset 1px 0 #ffffff18, inset -1px 0 #0008, 2px 4px 5px #000b; transition: opacity .14s; }
+.rack-view .rack-module-grid { display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px 3px; padding: 6px 4px 8px; background: repeating-linear-gradient(0deg, #162026 0, #162026 8px, #1a252d 9px, #11191f 10px); }
+.rack-view .rack-module { --module-accent: #a6bbc8; --cols: 2; position: relative; flex: 0 0 auto; display: flex; flex-direction: column; min-width: 0; padding: 11px 7px 12px; border: 1px solid #697680; border-bottom-color: #10171c; border-radius: 3px; background: linear-gradient(100deg, #343f47, #414b52 45%, #303c43); box-shadow: inset 1px 0 #ffffff18, inset -1px 0 #0008, 2px 4px 5px #000b; transition: opacity .14s; }
 .rack-view .rack-family-sequence { --module-accent: #bddc78; background: linear-gradient(100deg, #3b4335, #454e3e 50%, #323b30); }
 .rack-view .rack-family-oscillator { --module-accent: #79d6e9; }
 .rack-view .rack-family-envelope { --module-accent: #eab277; background: linear-gradient(100deg, #494139, #51483d, #393530); }
@@ -32,61 +35,78 @@
 .rack-view .rack-family-effect { --module-accent: #c7a3e4; background: linear-gradient(100deg, #413d4b, #4c4556, #36333f); }
 .rack-view .rack-family-mixer { --module-accent: #87d0b6; }
 .rack-view .rack-family-output { --module-accent: #d5ee9d; background: linear-gradient(110deg, #354039, #445246, #29362d); }
+.rack-view .rack-family-scope { --module-accent: #f6e05e; background: linear-gradient(105deg, #2a3036, #353c43 45%, #24292e); }
 .rack-view .rack-module.is-selected { border-color: #d4ec9f; box-shadow: 0 0 0 2px #c2df8d, 0 4px 12px #0009; }
 .rack-view .rack-module.is-dimmed { opacity: .31; }
 .rack-view .rack-module.is-dimmed:focus-within, .rack-view .rack-module.is-dimmed:hover { opacity: .85; }
-.rack-view .rack-screw { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(130deg, #8a959b, #283239); border: 1px solid #10191e; box-shadow: 0 1px 1px #000c; }
-.rack-view .rack-screw::after { content: ''; width: 4px; height: 1px; background: #111a20; position: absolute; top: 2px; left: 1px; transform: rotate(-35deg); }
-.rack-view .rack-screw-0 { left: 5px; top: 5px; } .rack-view .rack-screw-1 { right: 5px; top: 5px; } .rack-view .rack-screw-2 { left: 5px; bottom: 5px; } .rack-view .rack-screw-3 { right: 5px; bottom: 5px; }
-.rack-view .rack-module-head { position: relative; display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 3px 1px 10px; border: 0; border-radius: 0; border-bottom: 2px solid var(--module-accent); background: none; min-height: 73px; color: #f2f4ed; }
-.rack-view .rack-function-icon { position: absolute; right: 0; top: 0; width: 30px; height: 23px; color: var(--module-accent); fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.rack-view .rack-screw { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(130deg, #8a959b, #283239); border: 1px solid #10191e; box-shadow: 0 1px 1px #000c; }
+.rack-view .rack-screw::after { content: ''; width: 4px; height: 1px; background: #111a20; position: absolute; top: 1.5px; left: 0; transform: rotate(-35deg); }
+.rack-view .rack-screw-0 { left: 3px; top: 3px; } .rack-view .rack-screw-1 { right: 3px; top: 3px; } .rack-view .rack-screw-2 { left: 3px; bottom: 3px; } .rack-view .rack-screw-3 { right: 3px; bottom: 3px; }
+.rack-view .rack-module-head { position: relative; display: flex; flex-direction: column; align-items: stretch; min-width: 0; text-align: left; padding: 1px 1px 6px; min-height: 0; border: 0; border-radius: 0; border-bottom: 2px solid var(--module-accent); background: none; color: #f2f4ed; }
+.rack-view .rack-function-icon { position: absolute; right: 0; top: 0; width: 22px; height: 16px; color: var(--module-accent); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rack-view .rack-module-head:hover { background: #ffffff09; border-color: var(--module-accent); }
-.rack-view .rack-module-head strong { font-size: 14px; font-weight: 750; line-height: 1.45; overflow-wrap: anywhere; }
-.rack-view .rack-module-number { color: var(--module-accent); font: 9px/1.6 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; padding-right: 32px; min-height: 25px; }
-.rack-view .rack-module-head small { color: #bdc7cb; font-size: 9px; margin-top: 2px; }
-.rack-view .rack-params { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 12px 6px; padding: 16px 0 14px; flex: 1; }
-.rack-view .rack-param { min-width: 0; text-align: center; padding: 5px 1px; background: transparent; border-color: transparent; touch-action: none; user-select: none; cursor: ns-resize; }
+.rack-view .rack-module-head strong { font-size: 11px; font-weight: 750; line-height: 1.3; overflow-wrap: anywhere; }
+.rack-view .rack-module-number { color: var(--module-accent); font: 8px/1.5 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .05em; padding-right: 24px; min-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rack-view .rack-module-head small { color: #bdc7cb; font-size: 8px; line-height: 1.3; margin-top: 1px; }
+.rack-view .rack-params { --param-cols: 2; display: grid; grid-template-columns: repeat(var(--param-cols), minmax(0, 1fr)); align-content: start; gap: 6px 2px; padding: 8px 0 6px; flex: 1; }
+.rack-view .rack-param { min-width: 0; min-height: 0; text-align: center; padding: 3px 0; background: transparent; border-color: transparent; touch-action: none; user-select: none; cursor: ns-resize; }
 .rack-view .rack-param.is-editing { background: #c3e87920; border-color: #c3e879; }
 .rack-view .rack-param[aria-busy="true"] { opacity: .65; }
 .rack-view .rack-param:hover { background: #ffffff08; border-color: #ffffff28; }
-.rack-view .rack-dial { position: relative; display: block; width: 29px; height: 29px; margin: 0 auto 5px; border: 3px solid #20292f; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #5f6c72, #293239 68%); box-shadow: 0 2px 3px #000b, 0 0 0 2px #89949a55, 0 0 0 5px #111a1e33; }
-.rack-view .rack-dial::after { position: absolute; content: ''; width: 2px; height: 8px; left: calc(50% - 1px); top: 2px; background: var(--module-accent); border-radius: 1px; transform-origin: 50% 9.5px; transform: rotate(var(--angle)); }
+.rack-view .rack-dial { position: relative; display: block; width: 26px; height: 26px; margin: 2px auto 4px; border: 3px solid #20292f; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #5f6c72, #293239 68%); box-shadow: 0 2px 3px #000b, 0 0 0 2px #89949a55, 0 0 0 4px #111a1e33; }
+.rack-view .rack-dial::after { position: absolute; content: ''; width: 2px; height: 7px; left: calc(50% - 1px); top: 2px; background: var(--module-accent); border-radius: 1px; transform-origin: 50% 8px; transform: rotate(var(--angle)); }
 .rack-view .rack-param-name, .rack-view .rack-param-value, .rack-view .rack-param-source { display: block; overflow-wrap: anywhere; }
-.rack-view .rack-param-name { text-transform: uppercase; font-size: 9px; letter-spacing: .08em; color: #c5d0d5; }
-.rack-view .rack-param-value { font: 12px/1.6 ui-monospace, monospace; color: #f0f3e9; }
-.rack-view .rack-param-source { font: 7px/1.3 ui-monospace, monospace; color: #b3c0c6; letter-spacing: .04em; }
-.rack-view .rack-sequence-display { grid-column: 1/-1; align-self: start; margin: 4px 0; padding: 14px 9px; border: 3px solid #263026; border-radius: 4px; background: #111e16; box-shadow: inset 0 2px 6px #0008, 0 1px #83906a55; font: 11px/1.6 ui-monospace, monospace; color: #c3e894; overflow-wrap: anywhere; }
+.rack-view .rack-param-name { text-transform: uppercase; font-size: 8px; line-height: 1.25; letter-spacing: .03em; color: #c5d0d5; }
+.rack-view .rack-param-value { font: 10px/1.45 ui-monospace, monospace; color: #f0f3e9; }
+.rack-view .rack-param-source { font: 6.5px/1.2 ui-monospace, monospace; color: #b3c0c6; letter-spacing: .04em; }
+.rack-view .rack-sequence-display { grid-column: 1/-1; align-self: start; margin: 2px 0; padding: 7px 6px; border: 2px solid #263026; border-radius: 4px; background: #111e16; box-shadow: inset 0 2px 6px #0008, 0 1px #83906a55; font: 11px/1.4 ui-monospace, monospace; color: #c3e894; overflow-wrap: anywhere; }
 .rack-view .rack-sequence-display > * { display: block; }
-.rack-view .rack-sequence-display small { font-size: 8px; color: #8d9d78; letter-spacing: .1em; }
-.rack-view .rack-sequence-display strong { font-size: 17px; margin: 7px 0 12px; }
-.rack-view .rack-sequence-display span { font-size: 8px; }
-.rack-view .rack-ports { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 0 -3px; padding: 8px 3px 0; border-top: 1px solid #a5b1b32e; background: #131d2222; }
-.rack-view .rack-port-column { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.rack-view .rack-port-column > small { font: 8px/1.6 ui-monospace, monospace; color: #b5c2ca; letter-spacing: .1em; padding-left: 5px; }
-.rack-view .rack-jack { display: flex; align-items: center; gap: 6px; min-height: 29px; padding: 4px; background: transparent; border-color: transparent; color: #ecf1f4; text-align: left; touch-action: none; user-select: none; }
-.rack-view .rack-jack.is-drop-target { border-color: #b6dd73; background: #b6dd731c; outline: 1px dashed #b6dd73; }
+.rack-view .rack-sequence-display small { font-size: 7px; color: #8d9d78; letter-spacing: .1em; }
+.rack-view .rack-sequence-display strong { font-size: 13px; margin-top: 3px; }
+.rack-view .rack-ports { display: flex; align-items: flex-end; gap: 3px; margin: 0 -3px; padding: 5px 2px 0; border-top: 1px solid #a5b1b32e; }
+.rack-view .rack-port-group { --n: 1; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); align-content: start; gap: 1px; flex: 1 1 0; min-width: 0; border-radius: 4px; }
+.rack-view .rack-port-group.is-output { padding: 1px; background: #0b1114b8; box-shadow: inset 0 1px 3px #000a, 0 1px #ffffff12; }
+.rack-view .rack-jack { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; min-width: 0; min-height: 0; padding: 2px 1px 3px; background: transparent; border-color: transparent; color: #ecf1f4; text-align: center; touch-action: none; user-select: none; }
+.rack-view .rack-jack.is-drop-target { border-color: #b6dd73; background: #b6dd731c; outline: 1px dashed #b6dd73; outline-offset: -1px; }
 .rack-view .rack-jack.is-drop-hover { background: #b6dd7355; outline: 3px solid #d7ff8e; }
+.rack-view.is-probing .rack-jack.is-drop-target { border-color: #f6e05e; background: #f6e05e14; outline-color: #f6e05e99; }
+.rack-view.is-probing .rack-jack.is-drop-hover { background: #f6e05e44; outline: 3px solid #fff0a0; }
 .rack-view .rack-module:has(.is-drop-target) { opacity: 1; }
 .rack-view .rack-jack:hover { background: #ffffff0c; border-color: #ffffff3b; }
 .rack-view .rack-jack-ring { position: relative; display: block; width: 15px; height: 15px; flex-shrink: 0; border: 3px solid #8c969b; border-radius: 50%; background: #080e12; box-shadow: 0 1px 2px #000, 0 0 0 1px #101b22; }
 .rack-view .rack-jack.is-connected .rack-jack-ring { border-color: var(--signal); box-shadow: inset 0 0 0 1px #23373d, 0 1px 3px #000; }
-.rack-view .rack-jack-label { font: 10px/1.2 ui-monospace, monospace; overflow-wrap: anywhere; }
-.rack-view .rack-jack-value { display: block; font: 7px/1.5 ui-monospace, monospace; color: #bdc8ce; }
-.rack-view .rack-sum-label { border-top: 1px solid #ffffff25; padding-top: 7px; margin-top: 7px; font: 8px/1.4 ui-monospace, monospace; color: var(--module-accent); text-align: center; }
+.rack-view .rack-jack.is-probed .rack-jack-ring { box-shadow: 0 0 0 1px #0b1114, 0 0 0 3px var(--probe), 0 1px 3px #000; }
+.rack-view .rack-jack-label { display: block; max-width: 100%; font: 8px/1.2 ui-monospace, monospace; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rack-view .rack-jack-value { display: block; font: 6.5px/1.35 ui-monospace, monospace; color: #bdc8ce; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rack-view .rack-sum-label { border-top: 1px solid #ffffff25; padding: 4px 0; font: 7px/1.35 ui-monospace, monospace; color: var(--module-accent); text-align: center; }
 .rack-view .rack-jack.is-invalid { color: #ffb5a0; }
-.rack-view .rack-no-ports { color: #8e9da5; padding: 7px; }
+.rack-view .rack-scope-screen { --scope-screen-max-height: 190px; flex: 1; display: flex; flex-direction: column; min-width: 0; margin: 7px 0 4px; }
+.rack-view .rack-scope-screen > * { width: 100%; min-width: 0; }
+.rack-view .rack-scope-jacks .rack-jack { flex: 1 1 0; }
+.rack-view .rack-scope-jack .rack-jack-ring { width: 17px; height: 17px; border-color: color-mix(in srgb, var(--signal) 55%, #6c757a); }
+.rack-view .rack-scope-jack .rack-jack-label { font-weight: 700; color: var(--signal); }
+.rack-view .rack-scope-jack .rack-jack-value { color: #c6d0d5; font-weight: 400; }
+.rack-view .rack-scope-jack.is-unresolved .rack-jack-value { color: #ffb5a0; }
+.rack-view .rack-scope-note { display: block; font: 6.5px/1.35 ui-monospace, monospace; color: #94a3ab; letter-spacing: .04em; text-transform: uppercase; font-weight: 400; }
 .rack-view .rack-cables { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .rack-view .rack-cable { fill: none; stroke-linecap: round; opacity: .63; }
 .rack-view .rack-cable-shadow { stroke: #040a0e; stroke-width: 5.5px; }
 .rack-view .rack-cable-wire { stroke: var(--signal); stroke-width: 2.6px; }
+.rack-view .rack-cable.is-probe .rack-cable-wire { stroke-dasharray: 7 4; stroke-linecap: butt; }
+.rack-view .rack-cable.is-probe .rack-cable-shadow { stroke-dasharray: 9 2; stroke-linecap: butt; }
+.rack-view .rack-cable.is-ghost { opacity: .9; }
 .rack-view .rack-cable-hit { stroke: transparent; stroke-width: 12px; pointer-events: stroke; cursor: pointer; }
 .rack-view .rack-cable-hit:focus-visible { stroke: #ffffff66; outline: none; }
+.rack-view .rack-cable-label-path { fill: none; stroke: none; }
+.rack-view .rack-cable-label { pointer-events: none; user-select: none; font: 600 8px ui-monospace, monospace; letter-spacing: .01em; fill: color-mix(in srgb, var(--signal) 40%, #f4f8fa); stroke: #071015; stroke-width: 3px; stroke-linejoin: round; paint-order: stroke; }
 .rack-view .rack-cable-end { display: none; fill: var(--signal); stroke: #fff; stroke-width: 2px; pointer-events: all; cursor: grab; touch-action: none; }
+.rack-view .rack-cable:hover, .rack-view .rack-cable:focus-within { opacity: 1; }
 .rack-view .rack-cable.is-cable-selected { opacity: 1; }
 .rack-view .rack-cable.is-cable-selected .rack-cable-wire { stroke-width: 4px; }
 .rack-view .rack-cable.is-cable-selected .rack-cable-end { display: block; }
 .rack-view .rack-cable-end:active { cursor: grabbing; }
 .rack-view .rack-cable.is-dimmed { opacity: .055; }
+.rack-view .rack-cable.is-dimmed:hover { opacity: .5; }
 .rack-view .rack-cable.is-selected { opacity: 1; }
 .rack-view .rack-cable.is-selected .rack-cable-wire { stroke-width: 3.6px; }
 .rack-view .rack-inspector { border-top: 1px solid #46515a; background: #182127; padding: 12px 16px; }
@@ -98,6 +118,8 @@
 .rack-view .rack-note { margin: 0; font-size: 11px; color: #a7b6bf; }
 .rack-view .rack-unresolved { margin-top: 8px; color: #efb797; }
 .rack-view .rack-unresolved summary { cursor: pointer; }
+.rack-view .rack-unresolved-probe { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.rack-view .rack-unplug { border-color: #a0745e; color: #ffd2bd; }
 .rack-view .rack-route-picker { margin-top: 8px; }
 .rack-view .rack-route-picker summary { cursor: pointer; padding: 5px 0; }
 .rack-view .rack-route[aria-pressed="true"] { border-color: #c3e879; }

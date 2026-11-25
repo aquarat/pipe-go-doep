@@ -5,7 +5,7 @@ const clamp = (n, max) => Math.max(0, Math.min(max, Number.isFinite(n) ? n : 0))
 const clock = seconds => `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, '0')}`;
 
 // Stable element references survive adoption into a detached monitor window.
-export function createTransportUI(root, { audio, wave, onTime, onError, onStateChange, canPlay, renderedMatches }) {
+export function createTransportUI(root, { audio, wave, onTime, onError, onStateChange, canPlay, renderedMatches, onProbe = () => {}, onProbeReset = () => {} }) {
   const find = name => root.querySelector(`#transport-${name}`);
   const play = find('play'), stop = find('stop'), mode = find('mode'), seekbar = find('seek');
   const position = find('position'), message = find('state'), audition = find('audition');
@@ -16,7 +16,7 @@ export function createTransportUI(root, { audio, wave, onTime, onError, onStateC
     message.textContent = 'Live synth needs HTTPS or localhost. Rendered WAV playback is available.';
   }
   let project, signature, duration = 0, time = 0, live, generation = 0, frame, frameHost;
-  let scrubState = null, grainTimer, restoring = false, destroyed = false;
+  let scrubState = null, grainTimer, restoring = false, destroyed = false, probes = [];
   const removers = [];
   const listen = (target, event, fn) => { target.addEventListener(event, fn); removers.push(() => target.removeEventListener(event, fn)); };
   const isLive = () => mode.value === 'live';
@@ -54,7 +54,13 @@ export function createTransportUI(root, { audio, wave, onTime, onError, onStateC
       onState: () => { if (current === generation && isLive() && !destroyed) showState(); },
       onTime: seconds => { if (current === generation && isLive() && !scrubState && !destroyed) showTime(seconds); },
       onError: error => { if (current === generation) report(error); },
+      onProbe: block => { if (current === generation && isLive() && !destroyed) onProbe(block); },
     });
+  }
+  function attachLive() {
+    const next = newLive();
+    next.setProbes(probes); onProbeReset();
+    return next;
   }
   function region() {
     const scale = 60 / (Number(project?.bpm) || 120);
@@ -189,7 +195,7 @@ export function createTransportUI(root, { audio, wave, onTime, onError, onStateC
     setProject(next, saved = {}) {
       const changed = project?.id !== next.id;
       if (changed) {
-        pause(); ++generation; live?.destroy(); live = liveAvailable ? newLive() : null;
+        pause(); ++generation; live?.destroy(); live = liveAvailable ? attachLive() : null;
         time = 0; releaseScrub();
         restoring = true;
         mode.value = liveAvailable && saved.mode !== 'rendered' ? 'live' : 'rendered';
@@ -204,6 +210,16 @@ export function createTransportUI(root, { audio, wave, onTime, onError, onStateC
       if (changed || nextSignature !== signature) live?.setProject(next);
       signature = nextSignature;
       applyLoop(); restoring = false; showTime(time); showState();
+    },
+    setProbes(list) {
+      const next = Array.isArray(list) ? list : [];
+      if (JSON.stringify(next) === JSON.stringify(probes)) return;
+      probes = next; live?.setProbes(probes);
+    },
+    // Audible position for the oscilloscope, in source frames.
+    scopePosition() {
+      const rate = Number(project?.sample_rate) || 44100;
+      return { frame: Math.round((isLive() ? live?.state.position ?? time : time) * rate), sampleRate: rate, playing: playing(), live: isLive() && liveAvailable };
     },
     previewProject(next) { if (live?.state.ready) live.setProject(next); },
     restorePreview() { if (live?.state.ready && project) live.setProject(project); },

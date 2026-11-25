@@ -55,7 +55,7 @@ note events. These operations use only the Go standard library.
 | --- | --- |
 | `version` | Must be integer `1`. |
 | `id` | Optional project UUID; absent/empty means a legacy document without identity. |
-| `_ui` | Optional editor metadata; currently only `tree_expanded` is supported. |
+| `_ui` | Optional editor metadata: `tree_expanded` and `scope`. |
 | `title` | Optional display text, at most 1024 UTF-8 bytes. |
 | `sample_rate` | Integer, 8000–96000 samples/second inclusive. |
 | `bpm` | Finite tempo, 1–1000 beats/minute inclusive. |
@@ -115,6 +115,37 @@ Missing `_ui`, missing/empty `tree_expanded`, and paths not listed all default t
 collapsed. Tree expansion travels with the project JSON. Pane visibility and
 component-specific views live in browser storage keyed by the project UUID.
 Unknown `_ui` fields are rejected just like unknown score fields.
+
+### Oscilloscope probes
+
+`_ui.scope` stores the oscilloscope patch. It never affects scheduling, DSP or
+rendered audio.
+
+```json
+"_ui": {
+  "scope": {
+    "mode": "yt",
+    "inputs": {
+      "y1": {"node": "lead", "port": "out", "direction": "output"},
+      "x": {"bus": "left"}
+    }
+  }
+}
+```
+
+- `mode` is optional: `yt` (Y1-Y4 against time; the default) or `xy` (each Y
+  against X).
+- `inputs` is optional and maps channel names `x`, `y1`, `y2`, `y3`, `y4` to a
+  probe reference: either `{"node", "port", "direction"}` with identifier-shaped
+  `node`/`port` and `direction` `input` or `output`, or `{"bus": "left"|"right"}`
+  (stereo output after master gain, before clamping). Exactly one form is
+  allowed; mixing `bus` with node fields, `null` references and unknown fields
+  are rejected.
+- A reference to a node or port that does not exist is valid. It is a dangling
+  probe shown as unresolved, so deleting a module never invalidates a project.
+
+Display settings (timebase, scales, trigger, persistence) are browser view
+state, not `_ui`.
 
 ## Tracks and pitches
 

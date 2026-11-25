@@ -147,3 +147,35 @@ test('transport cancellation, source switching and WAV EOF looping remain contro
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+test('oscilloscope probes a module jack through the real Go engine without changing the sound', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } }), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/api/example?*', route => route.fulfill({ json: fixture }));
+    await page.goto(url);
+    await page.waitForFunction(() => document.querySelector('#title').textContent === 'Live transport check');
+    const source = page.locator('#rack-view .rack-scope-jack[data-channel="y1"]');
+    const target = page.locator('#rack-view .rack-jack[data-node-key="node:0"][data-direction="output"][data-port="out"]');
+    await source.scrollIntoViewIfNeeded();
+    const from = await source.locator('.rack-jack-ring').boundingBox(), to = await target.locator('.rack-jack-ring').boundingBox();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2); await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 }); await page.mouse.up();
+    await page.waitForFunction(() => JSON.parse(document.querySelector('#editor').value)._ui.scope?.inputs?.y1?.node === 'osc');
+    assert.deepEqual(JSON.parse(await page.locator('#editor').inputValue())._ui.scope.inputs.y1, { node: 'osc', port: 'out', direction: 'output' });
+    // The probe cable is drawn and labelled along its path.
+    await page.waitForFunction(() => [...document.querySelectorAll('#rack-view .rack-cable.is-probe textPath')].some(t => /osc/.test(t.textContent)));
+
+    await page.locator('#transport-play').click();
+    await page.waitForFunction(() => [...document.querySelectorAll('#rack-view .scope-readout')].some(r => /4[34]\d(\.\d+)?\s*Hz/.test(r.textContent)), null, { timeout: 30000 });
+    await page.locator('#transport-play').click();
+
+    // Unplug from the keyboard on the selected probe cable.
+    await page.locator('#rack-view .rack-cable.is-probe .rack-cable-hit').first().focus();
+    await page.keyboard.press('Enter'); await page.keyboard.press('Delete');
+    await page.waitForFunction(() => !JSON.parse(document.querySelector('#editor').value)._ui.scope?.inputs?.y1);
+    assert.equal(await page.locator('#rack-view .rack-cable.is-probe:not(.is-ghost)').count(), 0);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

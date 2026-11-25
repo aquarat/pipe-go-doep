@@ -44,3 +44,32 @@ func TestExampleMetadataDoesNotAffectRender(t *testing.T) {
 		})
 	}
 }
+
+func TestScopeMetadataDoesNotAffectRender(t *testing.T) {
+	b, err := os.ReadFile("../../examples/neon-dojo.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := score.Parse(bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.Beats, d.TailSeconds = 1, 0
+	d.UI = nil
+	var plain, scoped bytes.Buffer
+	plainStats, err := engine.Render(context.Background(), d, &plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.UI = &score.UIState{Scope: &score.ScopeState{Mode: "xy", Inputs: map[string]score.ProbeRef{
+		"x": {Bus: "left"}, "y1": {Node: d.Nodes[0].ID, Port: "out", Direction: "output"}, "y2": {Node: "gone", Port: "out", Direction: "input"},
+	}}}
+	scopedStats, err := engine.Render(context.Background(), d, &scoped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainStats.RenderSeconds, scopedStats.RenderSeconds = 0, 0
+	if !bytes.Equal(plain.Bytes(), scoped.Bytes()) || plainStats != scopedStats {
+		t.Fatal("scope metadata changed rendered WAV or statistics")
+	}
+}

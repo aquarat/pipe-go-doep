@@ -159,3 +159,18 @@ It checks project isolation, immediate-reload pane persistence, JSON tree export
 audio render/playback, stale-audio seek blocking, pending-source recovery, delayed
 project-load races, expansion limits and mobile overflow. See the score/rack
 visualisation references for component-level checks.
+
+## Oscilloscope
+
+The first rack faceplate is a probe oscilloscope with X and Y1–Y4 jacks. Drag
+from a scope jack to any module jack (input or output) or to the stereo output
+jacks; drag a selected probe cable's plug to move it, and drop it on empty space,
+press Delete or use **Unplug** to remove it. Probes are stored in `_ui.scope`, so
+they travel with the project JSON without affecting sound or WAV export.
+
+The scope draws while **Live synth** plays and freezes when paused. **YT** plots
+the Y inputs against time (time base, per-channel scale/offset, trigger source,
+level, slope and auto/normal/free-run); **XY** plots each Y input against X with
+adjustable persistence. **Auto** fits scales and the trigger level to the
+current signals. Display settings are saved in this browser per project. See
+[oscilloscope](scope.md).

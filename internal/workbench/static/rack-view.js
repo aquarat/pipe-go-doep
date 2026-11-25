@@ -1,12 +1,21 @@
 import { MODULES, parameterSpec } from './rack-model.js';
 const COLORS = { audio: '#7bd2e5', pitch: '#c3e879', gate: '#f1b36e', control: '#c49df1', left: '#81dabb', right: '#f293ac' };
-const OUTPUT = '$rack-output';
+const OUTPUT = '$rack-output', SCOPE = '$rack-scope';
+const CHANNELS = ['x', 'y1', 'y2', 'y3', 'y4'];
+// Matches scope-view.js COLOURS.
+const CHANNEL_COLORS = { x: '#f2f5f0', y1: '#ffd84a', y2: '#45e0f0', y3: '#ff5ed6', y4: '#6ff27c' };
+// Eurorack-style widths: 1 HP is HP CSS pixels; cells are the jack/dial grid pitch.
+const HP = 15, CELL = 44, FRAME = 16, SCOPE_HP = 24;
+const LABEL_MARGIN = 13, LABEL_STAGGER = [0.5, 0.24, 0.76, 0.37, 0.63];
+const JACK_ONLY = ['in', 'a', 'b', 'c', 'd', 'gate', 'trigger', 'reset'];
+let instances = 0;
 const array = value => Array.isArray(value) ? value : [];
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = value => typeof value === 'string' ? value : '';
 const number = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+const shortTitle = title => text(title).split(' · ')[0];
 function split(ref) {
   const value = text(ref), dot = value.indexOf('.');
   return dot > 0 ? { id: value.slice(0, dot), port: value.slice(dot + 1) } : { id: value, port: '' };
@@ -36,6 +45,7 @@ function functionIcon(doc, type, title) {
     drive: 'M2 20 H7 Q12 20 16 12 T25 4 H30', bitcrush: 'M2 20 H7 V15 H12 V10 H17 V5 H22 V10 H27 V15 H30',
     vca: 'M6 3 L27 12 L6 21 Z M2 12 H6 M27 12 H31', pan: 'M2 12 H12 M12 12 L25 4 H30 M12 12 L25 20 H30',
     constant: 'M2 12 H30 M16 4 V20', sequence: 'M2 19 H8 V11 H15 V4 H22 V15 H30', output: 'M2 5 H21 L28 2 V9 L21 5 M2 19 H21 L28 15 V22 L21 19',
+    scope: 'M2 3 H30 V21 H2 Z M4 13 C8 4 11 4 14 12 S21 21 24 12 S27 7 28 9',
   };
   const path = doc.createElementNS(ns, 'path'); path.setAttribute('d', own(paths, type) ? paths[type] : 'M3 4 H29 V20 H3 Z M10 12 H22'); svg.append(path); return svg;
 }
@@ -46,13 +56,33 @@ function dialPosition(name, value, sr, type) {
     ? Math.log1p(v - min) / Math.log1p(max - min) : (v - min) / (max - min);
   return -135 + fraction * 270;
 }
+function splitPorts(cols, inputs, outputs) {
+  if (!outputs) return { inCols: cols, outCols: 0, rows: Math.ceil(inputs / cols) };
+  if (!inputs) return { inCols: 0, outCols: Math.min(outputs, cols), rows: Math.ceil(outputs / cols) };
+  let best = null;
+  for (let out = 1; out < cols; out++) {
+    const rows = Math.max(Math.ceil(inputs / (cols - out)), Math.ceil(outputs / out));
+    if (!best || rows < best.rows) best = { inCols: cols - out, outCols: out, rows };
+  }
+  return best;
+}
+/** Narrowest grid (in cells) fitting dials and jacks in about three rows, so faceplates share a height. */
+export function arrangeModule(controls, inputs, outputs, extraRows = 0) {
+  let shape = null;
+  for (let cols = 2; cols <= 8; cols++) {
+    shape = { cols, ...splitPorts(cols, inputs, outputs), controlRows: Math.ceil(controls / cols) };
+    if (extraRows + shape.controlRows + shape.rows <= 3) break;
+  }
+  return { ...shape, hp: Math.ceil((shape.cols * CELL + FRAME) / HP) };
+}
 
 /** Native patch rack. Gestures preview locally; the coordinator commits edits. */
-export function createRackView(root, { onStateChange = () => {}, onReveal = () => {}, onEditParameter = () => false, onPreviewParameter = () => {}, onCancelParameter = () => {}, onRevealParameter = () => {}, onReconnect = () => false, onError = () => {} } = {}) {
-  const doc = root.ownerDocument;
-  let project = {}, state = {}, nodes = [], edges = [], byID = new Map(), ownership = new Map();
-  let cards = new Map(), jacks = new Map(), cableElements = [], frame = 0, scrollFrame = 0, destroyed = false, restoring = false;
-  const disposers = [];
+export function createRackView(root, { onStateChange = () => {}, onReveal = () => {}, onEditParameter = () => false, onPreviewParameter = () => {}, onCancelParameter = () => {}, onRevealParameter = () => {}, onReconnect = () => false, onProbe = () => false, onError = () => {}, scopeScreen = null } = {}) {
+  const doc = root.ownerDocument, instance = ++instances;
+  const hasScope = !!scopeScreen && typeof scopeScreen === 'object' && scopeScreen.nodeType === 1;
+  let project = {}, state = {}, nodes = [], edges = [], probes = [], scopeMode = 'yt', byID = new Map(), ownership = new Map();
+  let cards = new Map(), jacks = new Map(), cableElements = [], ghost = null, measure = null, widest = 0, frame = 0, scrollFrame = 0, destroyed = false, restoring = false;
+  const disposers = [], textWidths = new Map();
   let gesture = null, selectedCable = null, revision = 0, cablePreview = null, observer = null, observedWindow = null;
   const currentWindow = () => root.ownerDocument.defaultView;
   const cancelFrame = value => { if (value) value.win.cancelAnimationFrame(value.id); };
@@ -89,6 +119,7 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     if (content !== undefined) result.textContent = content;
     return result;
   }
+  function svg(tag, cls) { const result = doc.createElementNS('http://www.w3.org/2000/svg', tag); if (cls) result.classList.add(cls); return result; }
   function listen(target, event, handler, options) {
     target.addEventListener(event, handler, options);
     disposers.push(() => target.removeEventListener(event, handler, options));
@@ -114,10 +145,11 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
   toolbar.append(brand, trackLabel, searchLabel, zoomLabel, clear, reset);
   const legend = el('div', 'rack-legend');
   for (const [kind, color] of Object.entries(COLORS)) { const item = el('span', '', kind === 'pitch' ? 'pitch / Hz' : kind); item.style.setProperty('--signal', color); legend.append(item); }
-  legend.append(el('small', '', 'Drag dials ↑↓ · Shift fine · arrows adjust · click for exact JSON · select a cable, then drag either plug · Esc cancels'));
+  if (hasScope) { const item = el('span', 'rack-legend-probe', 'probe'); item.style.setProperty('--signal', CHANNEL_COLORS.y1); legend.append(item); }
+  legend.append(el('small', '', `Drag dials ↑↓ · Shift fine · arrows adjust · click for exact JSON · select a cable, then drag either plug${hasScope ? ' · drag from a scope jack to probe' : ''} · Esc cancels`));
   const viewport = el('div', 'rack-viewport'); viewport.tabIndex = 0; viewport.setAttribute('role', 'region'); viewport.setAttribute('aria-label', 'Patch rack');
   const spacer = el('div', 'rack-spacer'), canvas = el('div', 'rack-canvas'), rows = el('div', 'rack-rows');
-  const cables = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); cables.classList.add('rack-cables'); cables.setAttribute('aria-label', 'Patch cables');
+  const cables = svg('svg', 'rack-cables'); cables.setAttribute('aria-label', 'Patch cables');
   canvas.append(rows, cables); spacer.append(canvas); viewport.append(spacer);
   const inspector = el('div', 'rack-inspector'), summary = el('div', 'rack-summary'); summary.setAttribute('role', 'status');
   const details = el('div', 'rack-details'); inspector.append(summary, details);
@@ -137,7 +169,13 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     if (restoring || destroyed || scrollFrame) return;
     scrollFrame = requestFrame(() => { scrollFrame = 0; if (!restoring && !destroyed) save({ scrollLeft: viewport.scrollLeft, scrollTop: 0 }); });
   }, { passive: true });
-  listen(root, 'keydown', event => { if (event.key === 'Escape') select(''); });
+  listen(root, 'keydown', event => {
+    if (event.key === 'Escape') select('');
+    const target = event.target, editable = target?.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target?.tagName);
+    if (['Delete', 'Backspace'].includes(event.key) && selectedCable?.probeChannel && !editable && !gesture && !scopeScreen.contains(target)) {
+      event.preventDefault(); unplug(selectedCable.probeChannel);
+    }
+  });
 
   function select(key, reveal = false) {
     selectedCable = null;
@@ -145,6 +183,18 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     if (reveal) onReveal(key === OUTPUT ? '/output' : byID.get(key)?.pointer || '/nodes');
   }
   function syncControls() { tracks.value = state.track; search.value = state.query; zoom.value = String(state.zoom); }
+  function nodeTitle(key) {
+    if (key === OUTPUT) return 'Stereo output';
+    if (key === SCOPE) return 'Oscilloscope';
+    return shortTitle(byID.get(key)?.spec.title) || 'missing module';
+  }
+  // Cable captions: "port id [Title]" per end; short form drops the titles.
+  function endCaption(end, full) {
+    if (end.key === OUTPUT) return `${end.port === 'left' ? 'L' : 'R'}${full ? ' [Stereo output]' : ''}`;
+    if (end.key === SCOPE) return `${end.port.toUpperCase()}${full ? ' [Oscilloscope]' : ''}`;
+    return `${end.port || '?'} ${end.id || '?'}${full ? ` [${nodeTitle(end.key)}]` : ''}`;
+  }
+  function caption(edge) { edge.caption = `${endCaption(edge.from, true)} → ${endCaption(edge.to, true)}`; edge.shortCaption = `${endCaption(edge.from, false)} → ${endCaption(edge.to, false)}`; return edge; }
   function makeModel() {
     nodes = array(project.nodes).map((raw, index) => {
       const node = object(raw), id = text(node.id), type = text(node.type);
@@ -153,16 +203,32 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     byID = new Map(nodes.map(n => [n.key, n]));
     const ids = new Map();
     nodes.forEach(n => { if (!ids.has(n.id)) ids.set(n.id, n); });
+    const portNames = (node, direction) => node ? direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'] : [];
     function endpoint(ref, direction) {
       const parsed = split(ref), node = ids.get(parsed.id);
-      const names = node ? direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'] : [];
-      return { ...parsed, key: node?.key, valid: !!node && names.includes(parsed.port), direction };
+      return { ...parsed, key: node?.key, valid: !!node && portNames(node, direction).includes(parsed.port), direction };
     }
-    edges = array(project.connections).map((c, index) => ({ connectionIndex: index, from: endpoint(object(c).from, 'output'), to: endpoint(object(c).to, 'input'), pointer: `/connections/${index}`, label: `${text(object(c).from) || '?'} → ${text(object(c).to) || '?'}` }));
+    edges = array(project.connections).map((c, index) => caption({ connectionIndex: index, from: endpoint(object(c).from, 'output'), to: endpoint(object(c).to, 'input'), pointer: `/connections/${index}`, label: `${text(object(c).from) || '?'} → ${text(object(c).to) || '?'}` }));
     for (const channel of ['left', 'right']) {
       const ref = object(project.output)[channel];
-      if (typeof ref === 'string' && ref) edges.push({ outputChannel: channel, from: endpoint(ref, 'output'), to: { key: OUTPUT, id: 'output', port: channel, direction: 'input', valid: true }, pointer: `/output/${channel}`, label: `${ref} → output.${channel}` });
+      if (typeof ref === 'string' && ref) edges.push(caption({ outputChannel: channel, from: endpoint(ref, 'output'), to: { key: OUTPUT, id: 'output', port: channel, direction: 'input', valid: true }, pointer: `/output/${channel}`, label: `${ref} → output.${channel}` }));
     }
+    const scope = object(object(project._ui).scope), inputs = object(scope.inputs);
+    scopeMode = scope.mode === 'xy' ? 'xy' : 'yt';
+    probes = !hasScope ? [] : CHANNELS.filter(channel => own(inputs, channel)).map(channel => {
+      const ref = object(inputs[channel]);
+      let from, source;
+      if (own(ref, 'bus')) {
+        const bus = ref.bus === 'left' || ref.bus === 'right' ? ref.bus : '';
+        from = { key: bus ? OUTPUT : undefined, id: 'output', port: bus || text(ref.bus), direction: 'input', valid: !!bus };
+        source = `output.${bus || '?'}`;
+      } else {
+        const direction = ref.direction === 'input' ? 'input' : 'output', node = ids.get(text(ref.node));
+        from = { id: text(ref.node), port: text(ref.port), key: node?.key, direction, valid: !!node && ref.direction === direction && portNames(node, direction).includes(ref.port) };
+        source = `${from.id || '?'}.${from.port || '?'} (${text(ref.direction) || '?'})`;
+      }
+      return caption({ probeChannel: channel, ref, from, to: { key: SCOPE, id: 'scope', port: channel, direction: 'input', valid: true }, pointer: `/_ui/scope/inputs/${channel}`, label: `${source} → scope.${channel}` });
+    });
     ownership = new Map(nodes.map(n => [n.key, new Set(n.type === 'sequence' && text(n.track) ? [n.track] : [])]));
     ownership.set(OUTPUT, new Set());
     // Reachability follows actual cables, not naming conventions. Bounded for invalid cyclic drafts.
@@ -265,19 +331,22 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
     param.addEventListener('click', event => { if (!event.detail || !spec) invoke(onRevealParameter, change()); });
   }
   function selectCable(edge) { selectedCable = edge; state = { ...state, selected: '' }; save({ selected: '' }); applyFocus(); }
+  function hoveredJack(e, targets) {
+    return root.ownerDocument.elementsFromPoint(e.clientX, e.clientY).map(element => element.closest?.('.rack-jack')).find(jack => targets.includes(jack)) || null;
+  }
   function beginCable(event, target, edge, end, onClick = () => {}) {
     if (event.button !== 0 || gesture) return;
     selectCable(edge);
     const direction = end === 'from' ? 'output' : 'input';
     const targets = [...root.querySelectorAll('.rack-jack')].filter(jack =>
-      jack.dataset.direction === direction && jack.dataset.nodeKey !== OUTPUT && !jack.classList.contains('is-invalid') &&
+      jack.dataset.direction === direction && jack.dataset.nodeKey !== OUTPUT && jack.dataset.nodeKey !== SCOPE && !jack.classList.contains('is-invalid') &&
       (end === 'from' || !edges.some(e => e !== edge && e.to.key === jack.dataset.nodeKey && e.to.port === jack.dataset.port)));
     targets.forEach(jack => jack.classList.add('is-drop-target'));
     let hovered = null, moved = false;
     const move = e => {
       moved ||= Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY) >= 3;
       hovered?.classList.remove('is-drop-hover');
-      hovered = root.ownerDocument.elementsFromPoint(e.clientX, e.clientY).map(element => element.closest?.('.rack-jack')).find(jack => targets.includes(jack)) || null;
+      hovered = hoveredJack(e, targets);
       hovered?.classList.add('is-drop-hover');
       if (moved) { cablePreview = { edge, end, clientX: e.clientX, clientY: e.clientY }; refreshLayout(); }
     };
@@ -294,6 +363,38 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       invoke(onReconnect, change);
     })) cleanup();
   }
+  function unplug(channel) { invoke(onProbe, { channel, ref: null }); }
+  // Probe gestures start at a scope jack or at the module plug of a selected probe cable.
+  function beginProbe(event, target, channel, onClick = () => {}) {
+    if (event.button !== 0 || gesture || destroyed) return;
+    const probe = probes.find(p => p.probeChannel === channel);
+    if (probe) selectCable(probe);
+    const targets = [...root.querySelectorAll('.rack-jack')].filter(jack => jack.dataset.nodeKey !== SCOPE && !jack.classList.contains('is-invalid'));
+    targets.forEach(jack => jack.classList.add('is-drop-target', 'is-probe-target'));
+    root.classList.add('is-probing');
+    let hovered = null, moved = false;
+    const move = e => {
+      moved ||= Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY) >= 3;
+      hovered?.classList.remove('is-drop-hover');
+      hovered = hoveredJack(e, targets);
+      hovered?.classList.add('is-drop-hover');
+      if (moved) { cablePreview = { probeChannel: channel, edge: probe?.from.valid ? probe : null, end: 'from', clientX: e.clientX, clientY: e.clientY }; refreshLayout(); }
+    };
+    const cleanup = () => { targets.forEach(jack => jack.classList.remove('is-drop-target', 'is-probe-target', 'is-drop-hover')); root.classList.remove('is-probing'); cablePreview = null; refreshLayout(); };
+    if (!startGesture(event, target, move, (cancelled, e) => {
+      if (!cancelled) move(e);
+      const drop = hovered; cleanup();
+      if (cancelled) return;
+      if (!moved) { onClick(); return; }
+      if (!drop) { if (probe) unplug(channel); return; }
+      const { nodeKey, port, direction } = drop.dataset;
+      const ref = nodeKey === OUTPUT ? { bus: port } : { node: byID.get(nodeKey).id, port, direction };
+      const current = probe?.ref;
+      if (current && (ref.bus ? current.bus === ref.bus : current.node === ref.node && current.port === ref.port && current.direction === ref.direction)) return;
+      invoke(onProbe, { channel, ref });
+    })) cleanup();
+  }
+  function probesAt(key, direction, port) { return probes.filter(p => p.from.key === key && p.from.direction === direction && p.from.port === port); }
   function makeJack(node, direction, port, valid = true) {
     const connected = edges.filter(e => (direction === 'input' ? e.to : e.from).key === node.key && (direction === 'input' ? e.to : e.from).port === port);
     const color = COLORS[signal(port, node.type)];
@@ -312,61 +413,131 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       if (edge && !(edge.outputChannel && direction === 'input')) beginCable(event, b, edge, direction === 'input' ? 'to' : 'from', reveal);
     });
     b.classList.toggle('is-connected', connected.length > 0); b.classList.toggle('is-invalid', !valid);
+    const probed = probesAt(node.key, direction, port);
+    if (probed.length) { b.classList.add('is-probed'); b.style.setProperty('--probe', CHANNEL_COLORS[probed[0].probeChannel]); }
     const ring = el('span', 'rack-jack-ring'); ring.setAttribute('aria-hidden', 'true');
     b.append(ring, el('span', 'rack-jack-label', `${port}${valid ? '' : ' ?'}`));
     if (direction === 'input' && node.key !== OUTPUT) {
       const value = el('small', 'rack-jack-value', `${connected.length ? 'PATCH' : own(object(node.params), port) ? 'SET' : 'DEF'} ${valueText(fallback)}`);
       b.querySelector('.rack-jack-label').append(value);
     }
-    b.title = `${node.id || 'Stereo output'}.${port} · ${direction}${connected.length ? ` · ${connected.map(e => e.label).join('; ')}` : direction === 'input' && fallback !== undefined ? ` · default ${valueText(fallback)}` : ' · unconnected'}`;
+    const routes = [...connected.map(e => e.label), ...probed.map(p => `probed by scope ${p.probeChannel.toUpperCase()}`)];
+    b.title = `${node.id || 'Stereo output'}.${port} · ${direction}${routes.length ? ` · ${routes.join('; ')}` : direction === 'input' && fallback !== undefined ? ` · default ${valueText(fallback)}` : ' · unconnected'}`;
     b.setAttribute('aria-label', b.title);
     jacks.set(jackKey(node.key, direction, port), ring);
     return b;
   }
-  function makeCard(node) {
+  function makeHead(node, onClick) {
+    const head = button('', onClick, 'rack-module-head');
+    head.append(functionIcon(doc, node.type, node.spec.title), el('span', 'rack-module-number', node.key === OUTPUT ? 'STEREO / OUT' : node.key === SCOPE ? 'PROBE / MONITOR' : `${String(node.index + 1).padStart(2, '0')} / ${node.type || '?'}`), el('strong', '', node.id || 'Untitled module'), el('small', '', node.spec.title));
+    return head;
+  }
+  function makeShell(node, hp) {
     const card = el('article', `rack-module rack-family-${node.spec.family}`); card.dataset.nodeKey = node.key; card.dataset.moduleType = node.type;
+    card.dataset.hp = hp; card.style.width = `${hp * HP}px`; widest = Math.max(widest, hp * HP);
     cards.set(node.key, card);
     for (let i = 0; i < 4; i++) card.append(el('i', `rack-screw rack-screw-${i}`));
-    const head = button('', () => select(node.key, true), 'rack-module-head');
-    head.append(functionIcon(doc, node.type, node.spec.title), el('span', 'rack-module-number', node.key === OUTPUT ? 'STEREO / OUT' : `${String(node.index + 1).padStart(2, '0')} / ${node.type || '?'}`), el('strong', '', node.id || 'Untitled module'), el('small', '', node.spec.title));
-    card.append(head);
+    return card;
+  }
+  function makeCard(node) {
+    const defaults = node.key === OUTPUT ? {} : { ...node.spec.inputs, ...node.spec.params }, actual = object(node.params);
+    const controls = [...new Set([...Object.keys(defaults), ...Object.keys(actual)])].filter(name => !JACK_ONLY.includes(name));
+    const ports = {};
+    for (const direction of ['input', 'output']) {
+      const standard = direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'];
+      const names = new Set(standard);
+      for (const edge of edges) { const endpoint = direction === 'input' ? edge.to : edge.from; if (endpoint.key === node.key && endpoint.port) names.add(endpoint.port); }
+      ports[direction] = [...names].map(port => [port, standard.includes(port)]);
+    }
+    const shape = arrangeModule(controls.length, ports.input.length, ports.output.length, node.type === 'sequence' ? 1 : 0);
+    const card = makeShell(node, shape.hp);
+    card.style.setProperty('--cols', shape.cols);
+    card.append(makeHead(node, () => select(node.key, true)));
     const params = el('div', 'rack-params');
+    // Balanced rows: four dials in three columns become 2 + 2 rather than 3 + 1.
+    params.style.setProperty('--param-cols', Math.max(1, Math.ceil(controls.length / Math.max(1, Math.ceil(controls.length / shape.cols)))));
     if (node.type === 'sequence') {
       const display = el('div', 'rack-sequence-display');
-      display.append(el('small', '', 'SCORE CONTROL'), el('strong', '', text(node.track) || 'No track assigned'), el('span', '', 'FREQ · GATE · VEL · TRIG'));
+      display.append(el('small', '', 'SCORE CONTROL'), el('strong', '', text(node.track) || 'No track assigned'));
       params.append(display);
     }
-    const defaults = node.key === OUTPUT ? {} : { ...node.spec.inputs, ...node.spec.params }, actual = object(node.params);
-    const names = new Set([...Object.keys(defaults), ...Object.keys(actual)]);
-    for (const name of names) {
-      if (['in', 'a', 'b', 'c', 'd', 'gate', 'trigger', 'reset'].includes(name)) continue;
+    for (const name of controls) {
       const value = own(actual, name) ? actual[name] : defaults[name];
       const patched = edges.some(e => e.to.key === node.key && e.to.port === name);
       const param = el('button', 'rack-param'); param.type = 'button';
       param.title = `${name}: ${valueText(value)} (${own(actual, name) ? 'project value' : 'default'}${patched ? '; replaced by patched input during rendering' : ''})`;
       const dial = el('span', 'rack-dial'); dial.setAttribute('aria-hidden', 'true'); dial.style.setProperty('--angle', `${dialPosition(name, value, clamp(number(project.sample_rate, 44100), 8000, 96000), node.type)}deg`);
-      param.append(dial, el('span', 'rack-param-name', node.type === 'mixer' && name.startsWith('gain_') ? `CH ${name.slice(-1).toUpperCase()} · GAIN` : name.replaceAll('_', ' ')), el('strong', 'rack-param-value', valueText(value)), el('small', 'rack-param-source', patched ? 'PATCHED · base' : own(actual, name) ? 'SET' : 'DEFAULT'));
+      param.append(dial, el('span', 'rack-param-name', node.type === 'mixer' && name.startsWith('gain_') ? `GAIN ${name.slice(-1).toUpperCase()}` : name.replaceAll('_', ' ')), el('strong', 'rack-param-value', valueText(value)), el('small', 'rack-param-source', patched ? 'PATCHED' : own(actual, name) ? 'SET' : 'DEFAULT'));
       wireControl(param, node, name, value, parameterSpec(node.type, name, number(project.sample_rate, 44100)));
       params.append(param);
     }
     if (!params.childNodes.length) params.append(el('p', 'rack-note', 'Signal routing'));
     card.append(params);
-    const ports = el('div', 'rack-ports');
-    for (const direction of ['input', 'output']) {
-      const column = el('div', 'rack-port-column'); column.append(el('small', '', direction === 'input' ? 'INPUTS' : 'OUTPUTS'));
-      const standard = direction === 'input' ? Object.keys(node.spec.inputs) : node.spec.outputs || ['out'];
-      const names = new Set(standard);
-      for (const edge of edges) { const endpoint = direction === 'input' ? edge.to : edge.from; if (endpoint.key === node.key && endpoint.port) names.add(endpoint.port); }
-      for (const port of names) column.append(makeJack(node, direction, port, standard.includes(port)));
-      if (!names.size) column.append(el('span', 'rack-no-ports', '—'));
-      ports.append(column);
-    }
-    card.append(ports);
     if (node.type === 'mixer') card.append(el('div', 'rack-sum-label', 'Σ OUT = A·gA + B·gB + C·gC + D·gD'));
+    const portPanel = el('div', 'rack-ports');
+    for (const direction of ['input', 'output']) {
+      if (!ports[direction].length) continue;
+      const group = el('div', `rack-port-group is-${direction}`); group.setAttribute('role', 'group'); group.setAttribute('aria-label', direction === 'input' ? 'Inputs' : 'Outputs');
+      const cols = direction === 'input' ? shape.inCols : shape.outCols;
+      group.style.setProperty('--n', cols); group.style.flexGrow = cols;
+      for (const [port, valid] of ports[direction]) group.append(makeJack(node, direction, port, valid));
+      portPanel.append(group);
+    }
+    card.append(portPanel);
     return card;
   }
+  function makeScopeCard() {
+    const node = { key: SCOPE, id: 'Oscilloscope', type: 'scope', spec: { title: 'Probe monitor · observes, never changes sound', family: 'scope' } };
+    const card = makeShell(node, SCOPE_HP);
+    card.append(makeHead(node, () => select(SCOPE)));
+    const screen = el('div', 'rack-scope-screen'); screen.append(scopeScreen); card.append(screen);
+    const panel = el('div', 'rack-ports rack-scope-jacks'); panel.setAttribute('role', 'group'); panel.setAttribute('aria-label', 'Oscilloscope inputs');
+    for (const channel of CHANNELS) {
+      const probe = probes.find(p => p.probeChannel === channel), name = channel.toUpperCase();
+      const choose = () => { if (probe) selectCable(probe); else select(SCOPE); };
+      const b = button('', event => { if (!event.detail) choose(); }, 'rack-jack rack-scope-jack');
+      b.dataset.port = channel; b.dataset.direction = 'input'; b.dataset.nodeKey = SCOPE; b.dataset.channel = channel;
+      b.style.setProperty('--signal', CHANNEL_COLORS[channel]);
+      b.classList.toggle('is-connected', !!probe); b.classList.toggle('is-unresolved', !!probe && !probe.from.valid);
+      b.addEventListener('pointerdown', event => beginProbe(event, b, channel, choose));
+      const ring = el('span', 'rack-jack-ring'); ring.setAttribute('aria-hidden', 'true');
+      const label = el('span', 'rack-jack-label', name);
+      if (channel === 'x' && scopeMode === 'yt') label.append(el('small', 'rack-scope-note', 'XY mode'));
+      label.append(el('small', 'rack-jack-value', probe ? probe.from.valid ? endCaption(probe.from, false) : 'unresolved' : '—'));
+      b.append(ring, label);
+      b.title = `Oscilloscope ${name}${channel === 'x' && scopeMode === 'yt' ? ' (used in XY mode)' : ''} · ${probe ? probe.caption + (probe.from.valid ? '' : ' (unresolved)') : 'unplugged; drag onto any module or output jack to probe'}`;
+      b.setAttribute('aria-label', b.title);
+      jacks.set(jackKey(SCOPE, 'input', channel), ring);
+      panel.append(b);
+    }
+    card.append(panel);
+    return card;
+  }
+  function cableGroup(edge, kind, handleEnds) {
+    const group = svg('g', 'rack-cable'), shadow = svg('path', 'rack-cable-shadow'), wire = svg('path', 'rack-cable-wire'), hit = svg('path', 'rack-cable-hit');
+    const defs = svg('defs'), labelPath = svg('path', 'rack-cable-label-path'), label = svg('text', 'rack-cable-label'), textPath = svg('textPath');
+    labelPath.id = `rack${instance}-cable${cableElements.length}`; defs.append(labelPath);
+    textPath.setAttribute('href', `#${labelPath.id}`); label.append(textPath); label.setAttribute('dy', '-3.5'); label.setAttribute('aria-hidden', 'true');
+    hit.setAttribute('role', 'button'); hit.setAttribute('tabindex', '0'); hit.setAttribute('aria-label', `Select ${edge.probeChannel ? 'probe' : 'cable'}: ${edge.label}`);
+    hit.addEventListener('click', () => selectCable(edge));
+    hit.addEventListener('keydown', event => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); selectCable(edge); } });
+    group.style.setProperty('--signal', edge.probeChannel ? CHANNEL_COLORS[edge.probeChannel] : COLORS[kind] || COLORS.audio);
+    if (edge.probeChannel) { group.classList.add('is-probe'); group.dataset.channel = edge.probeChannel; }
+    group.append(defs, shadow, wire, label, hit);
+    const handles = {};
+    for (const end of handleEnds) {
+      const handle = svg('circle', 'rack-cable-end'); handle.dataset.end = end; handle.setAttribute('r', '8');
+      const title = svg('title'); title.textContent = `Drag ${edge.probeChannel ? 'probe' : end === 'from' ? 'source' : 'destination'}: ${edge.label}`; handle.append(title);
+      handle.addEventListener('pointerdown', event => edge.probeChannel ? beginProbe(event, handle, edge.probeChannel) : beginCable(event, handle, edge, end));
+      group.append(handle); handles[end] = handle;
+    }
+    cables.append(group);
+    const item = { edge, group, shadow, wire, hit, handles, label, textPath, labelPath };
+    cableElements.push(item);
+    return item;
+  }
   function render() {
-    cards = new Map(); jacks = new Map(); cableElements = []; rows.replaceChildren(); cables.replaceChildren(); tracks.replaceChildren();
+    cards = new Map(); jacks = new Map(); cableElements = []; widest = 0; rows.replaceChildren(); cables.replaceChildren(); tracks.replaceChildren();
     const trackIDs = [...new Set([...array(project.tracks).map(t => text(object(t).id)), ...nodes.filter(n => n.type === 'sequence').map(n => text(n.track))].filter(Boolean))];
     const all = el('option', '', 'All tracks / full patch'); all.value = ''; tracks.append(all);
     for (const id of trackIDs) { const option = el('option', '', id); option.value = id; tracks.append(option); }
@@ -377,101 +548,173 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       (groups.get(track) || groups.get(null)).push(node);
     }
     groups.get(null).push({ key: OUTPUT, id: 'Stereo output', type: 'output', pointer: '/output', params: { gain: own(object(project.output), 'gain') ? project.output.gain : 0 }, spec: { title: 'Render bus · left / right', family: 'output', inputs: { left: 0, right: 0 }, outputs: [], params: {} } });
+    let first = true;
     for (const [track, members] of groups) {
       if (!members.length) continue;
       const row = el('section', 'rack-row'), heading = el('h3', 'rack-row-title');
       heading.append(el('span', '', track === null ? 'Shared sources / mix / output' : track), el('small', '', `${members.length} modules`));
-      const modules = el('div', 'rack-module-grid'); members.forEach(n => modules.append(makeCard(n))); row.append(heading, modules); rows.append(row);
+      const modules = el('div', 'rack-module-grid');
+      // The scope leads the rack; the scope screen element is moved, never recreated.
+      if (first && hasScope) modules.append(makeScopeCard());
+      first = false;
+      members.forEach(n => modules.append(makeCard(n))); row.append(heading, modules); rows.append(row);
     }
     if (!nodes.length) rows.prepend(el('p', 'rack-empty', 'No modules yet. Add nodes and connections in the JSON editor to build the rack.'));
     for (const edge of edges) {
-      const group = doc.createElementNS(cables.namespaceURI, 'g'), shadow = doc.createElementNS(cables.namespaceURI, 'path'), wire = doc.createElementNS(cables.namespaceURI, 'path'), hit = doc.createElementNS(cables.namespaceURI, 'path');
-      group.classList.add('rack-cable'); shadow.classList.add('rack-cable-shadow'); wire.classList.add('rack-cable-wire');
-      hit.classList.add('rack-cable-hit'); hit.setAttribute('role', 'button'); hit.setAttribute('tabindex', '0'); hit.setAttribute('aria-label', `Select cable: ${edge.label}`);
-      hit.addEventListener('click', () => selectCable(edge));
-      hit.addEventListener('keydown', event => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); selectCable(edge); } });
       const kind = edge.to.key === OUTPUT ? edge.to.port : signal(edge.to.port, byID.get(edge.to.key)?.type);
-      group.style.setProperty('--signal', COLORS[kind] || COLORS.audio);
-      group.append(shadow, wire, hit);
-      const handles = {};
-      for (const end of edge.outputChannel ? ['from'] : ['from', 'to']) {
-        const handle = doc.createElementNS(cables.namespaceURI, 'circle'); handle.classList.add('rack-cable-end'); handle.dataset.end = end; handle.setAttribute('r', '8');
-        const title = doc.createElementNS(cables.namespaceURI, 'title'); title.textContent = `Drag ${end === 'from' ? 'source' : 'destination'}: ${edge.label}`; handle.append(title);
-        handle.addEventListener('pointerdown', event => beginCable(event, handle, edge, end));
-        group.append(handle); handles[end] = handle;
-      }
-      cables.append(group); cableElements.push({ edge, group, shadow, wire, hit, handles });
+      cableGroup(edge, kind, edge.outputChannel ? ['from'] : ['from', 'to']);
     }
+    for (const probe of probes) cableGroup(probe, 'probe', ['from']);
+    ghost = null;
+    if (hasScope) {
+      ghost = { group: svg('g', 'rack-cable'), shadow: svg('path', 'rack-cable-shadow'), wire: svg('path', 'rack-cable-wire') };
+      ghost.group.classList.add('is-probe', 'is-ghost'); ghost.group.style.display = 'none'; ghost.group.append(ghost.shadow, ghost.wire); cables.append(ghost.group);
+    }
+    measure = svg('text', 'rack-cable-label'); measure.classList.add('rack-cable-measure'); measure.setAttribute('visibility', 'hidden'); measure.setAttribute('aria-hidden', 'true'); cables.append(measure);
     syncControls(); applyFocus(); refreshLayout();
   }
   function matches(key) {
-    const node = byID.get(key), query = state.query.trim().toLowerCase();
+    const query = state.query.trim().toLowerCase();
+    if (key === SCOPE) return (!state.track && !query) || (!state.track && 'oscilloscope scope probe'.includes(query)) || probes.some(p => p.from.key && matches(p.from.key));
+    const node = byID.get(key);
     return (!state.track || ownership.get(key)?.has(state.track)) && (!query || `${node?.id || 'Stereo output'} ${node?.type || 'output'}`.toLowerCase().includes(query));
   }
+  function allCables() { return [...edges, ...probes]; }
   function applyFocus() {
     const selected = state.selected, related = new Set(selected ? [selected] : []);
-    for (const edge of edges) if (edge.from.key === selected || edge.to.key === selected) { related.add(edge.from.key); related.add(edge.to.key); }
+    for (const edge of allCables()) if (edge.from.key === selected || edge.to.key === selected) { related.add(edge.from.key); related.add(edge.to.key); }
     for (const [key, card] of cards) {
       card.classList.toggle('is-dimmed', !matches(key) || (!!selected && !related.has(key)));
       card.classList.toggle('is-selected', selected === key);
       card.querySelector('.rack-module-head').setAttribute('aria-pressed', String(selected === key));
     }
     for (const { edge, group } of cableElements) {
-      const active = selectedCable ? edge === selectedCable : selected ? edge.from.key === selected || edge.to.key === selected : matches(edge.from.key) && matches(edge.to.key);
+      const active = selectedCable ? edge === selectedCable : selected ? edge.from.key === selected || edge.to.key === selected : matches(edge.from.key) && (edge.probeChannel || matches(edge.to.key));
       group.classList.toggle('is-dimmed', !active); group.classList.toggle('is-selected', !!selected && active);
       group.classList.toggle('is-cable-selected', edge === selectedCable);
       group.querySelector('.rack-cable-hit').setAttribute('aria-pressed', String(edge === selectedCable));
-      if ((selected || selectedCable) && active) cables.append(group);
+      if ((selected || selectedCable) && active) {
+        // Raising a cable must not drop keyboard focus from its hit path (Delete unplugs probes).
+        const focused = root.ownerDocument.activeElement, refocus = group.contains(focused);
+        cables.insertBefore(group, ghost?.group || measure);
+        if (refocus) focused.focus({ preventScroll: true });
+      }
     }
     clear.disabled = !selected && !selectedCable;
-    const unresolved = edges.filter(e => !e.from.valid || !e.to.valid);
-    summary.textContent = `${nodes.length} modules · ${array(project.connections).length} patch cables · ${edges.filter(e => e.to.key === OUTPUT).length}/2 output routes${unresolved.length ? ` · ${unresolved.length} unresolved routes` : ''}`;
+    const unresolved = edges.filter(e => !e.from.valid || !e.to.valid), dangling = probes.filter(p => !p.from.valid);
+    summary.textContent = `${nodes.length} modules · ${array(project.connections).length} patch cables · ${edges.filter(e => e.to.key === OUTPUT).length}/2 output routes${hasScope ? ` · ${probes.length}/5 scope probes` : ''}${unresolved.length ? ` · ${unresolved.length} unresolved routes` : ''}${dangling.length ? ` · ${dangling.length} unresolved probes` : ''}`;
     details.replaceChildren();
     const node = byID.get(selected);
-    if (selected && (node || selected === OUTPUT)) {
+    const unplugButton = probe => button(`Unplug ${probe.probeChannel.toUpperCase()}`, () => unplug(probe.probeChannel), 'rack-unplug');
+    if (selected === SCOPE && hasScope) {
+      const title = el('div', 'rack-detail-title'); title.append(el('strong', '', 'Oscilloscope'), el('span', 'rack-note', `Mode ${scopeMode.toUpperCase()}. Drag from a scope jack onto any highlighted module or output jack.`)); details.append(title);
+      const list = el('div', 'rack-route-list');
+      for (const channel of CHANNELS) {
+        const probe = probes.find(p => p.probeChannel === channel);
+        const choice = button(`${channel.toUpperCase()}: ${probe ? `${probe.caption}${probe.from.valid ? '' : ' (unresolved)'}` : 'unplugged'}`, () => probe && selectCable(probe), 'rack-route');
+        choice.disabled = !probe; list.append(choice);
+      }
+      details.append(list);
+    } else if (selected && (node || selected === OUTPUT)) {
       const title = el('div', 'rack-detail-title'); title.append(el('strong', '', node?.id || 'Stereo output'), button('Reveal JSON ↗', () => onReveal(node?.pointer || '/output'))); details.append(title);
-      const routes = edges.filter(e => e.from.key === selected || e.to.key === selected);
+      const routes = allCables().filter(e => e.from.key === selected || e.to.key === selected);
       if (!routes.length) details.append(el('p', 'rack-note', 'No cables connected.'));
       const list = el('div', 'rack-route-list');
       for (const e of routes) list.append(button(e.label, () => selectCable(e), 'rack-route'));
       details.append(list);
+    } else if (selectedCable?.probeChannel) {
+      const row = el('div', 'rack-detail-title');
+      row.append(el('strong', '', selectedCable.caption), unplugButton(selectedCable), button('Reveal probe JSON ↗', () => onReveal(selectedCable.pointer)));
+      details.append(row, el('p', 'rack-note', 'Drag the highlighted plug at the module end to another jack, or drop it on empty space to unplug. Delete/Backspace also unplugs. Probes never change the sound.'));
     } else if (selectedCable) {
       details.append(el('strong', '', selectedCable.label), el('p', 'rack-note', selectedCable.outputChannel ? 'Drag the highlighted source plug to an output jack. The stereo bus destination is fixed.' : 'Drag either highlighted plug to a compatible jack. Select a different cable below to disambiguate fan-out.'), button('Reveal cable JSON ↗', () => onReveal(selectedCable.pointer)));
-    } else details.append(el('p', 'rack-note', 'Select a faceplate to trace connections, or a cable to move its plugs. Dials preview configured/base values while dragging and commit on release.'));
-    const routePicker = el('details', 'rack-route-picker'); routePicker.append(el('summary', '', `Select cable (${edges.length})`));
+    } else details.append(el('p', 'rack-note', `Select a faceplate to trace connections, or a cable to move its plugs. Dials preview configured/base values while dragging and commit on release.${hasScope ? ' Drag from an oscilloscope jack to probe any jack.' : ''}`));
+    const every = allCables();
+    const routePicker = el('details', 'rack-route-picker'); routePicker.append(el('summary', '', `Select cable (${every.length})`));
     const routeList = el('div', 'rack-route-list');
-    for (const edge of edges) { const choice = button(edge.label, () => selectCable(edge), 'rack-route'); choice.setAttribute('aria-pressed', String(edge === selectedCable)); routeList.append(choice); }
+    for (const edge of every) { const choice = button(edge.label, () => selectCable(edge), 'rack-route'); choice.setAttribute('aria-pressed', String(edge === selectedCable)); routeList.append(choice); }
     routePicker.append(routeList); details.append(routePicker);
-    if (unresolved.length) {
+    if (unresolved.length || dangling.length) {
       const errors = el('details', 'rack-unresolved'); errors.append(el('summary', '', 'Incomplete routing in this draft'));
       for (const e of unresolved) errors.append(button(e.label, () => onReveal(e.pointer), 'rack-route'));
+      for (const p of dangling) {
+        const row = el('div', 'rack-unresolved-probe');
+        row.append(button(`Unresolved probe ${p.label}`, () => onReveal(p.pointer), 'rack-route'), unplugButton(p));
+        errors.append(row);
+      }
       details.append(errors);
     }
+  }
+  function textWidth(value) {
+    if (textWidths.has(value)) return textWidths.get(value);
+    measure.textContent = value;
+    const width = measure.getComputedTextLength();
+    if (width > 0) textWidths.set(value, width);
+    return width || value.length * 5.4;
+  }
+  // Labels follow the hanging curve but always read left to right.
+  function placeLabel({ edge, label, textPath, labelPath }, a, b, sag, index) {
+    const reversed = b.x < a.x, [p, q] = reversed ? [b, a] : [a, b];
+    labelPath.setAttribute('d', `M ${p.x} ${p.y} C ${p.x} ${p.y + sag}, ${q.x} ${q.y + sag}, ${q.x} ${q.y}`);
+    const room = labelPath.getTotalLength() - 2 * LABEL_MARGIN;
+    let value = edge.caption, width = textWidth(value), fit = 'full';
+    if (width > room) { value = edge.shortCaption; width = textWidth(value); fit = 'short'; }
+    if (width > room) fit = 'hidden';
+    label.dataset.fit = fit; label.dataset.reversed = String(reversed);
+    label.style.display = fit === 'hidden' ? 'none' : '';
+    if (fit === 'hidden') return;
+    if (textPath.textContent !== value) textPath.textContent = value;
+    textPath.setAttribute('startOffset', (LABEL_MARGIN + (room - width) * LABEL_STAGGER[index % LABEL_STAGGER.length]).toFixed(1));
+  }
+  const curve = (a, b, sag) => `M ${a.x} ${a.y} C ${a.x} ${a.y + sag}, ${b.x} ${b.y + sag}, ${b.x} ${b.y}`;
+  // The hit stroke stops short of both plugs so jacks under cable ends stay clickable/draggable.
+  function hitCurve(a, b, sag) {
+    const points = [a, { x: a.x, y: a.y + sag }, { x: b.x, y: b.y + sag }, b];
+    const lerp = (p, q, t) => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
+    const at = t => { const u = 1 - t; return { x: u * u * u * points[0].x + 3 * u * u * t * points[1].x + 3 * u * t * t * points[2].x + t * t * t * points[3].x, y: u * u * u * points[0].y + 3 * u * u * t * points[1].y + 3 * u * t * t * points[2].y + t * t * t * points[3].y }; };
+    // Sampled arc length: leave about 26 px uncovered at each plug (the jack ring and its label).
+    let t0 = 0.3, length = 0, previous = points[0];
+    for (let i = 1; i <= 24; i++) { const point = at(i / 80); length += Math.hypot(point.x - previous.x, point.y - previous.y); previous = point; if (length >= 26) { t0 = i / 80; break; } }
+    const t1 = 1 - t0;
+    const splitAt = ([p0, p1, p2, p3], t) => {
+      const a1 = lerp(p0, p1, t), b1 = lerp(p1, p2, t), c1 = lerp(p2, p3, t), a2 = lerp(a1, b1, t), b2 = lerp(b1, c1, t), m = lerp(a2, b2, t);
+      return [[p0, a1, a2, m], [m, b2, c1, p3]];
+    };
+    const [p0, p1, p2, p3] = splitAt(splitAt(points, t1)[0], t0 / t1)[1];
+    return `M ${p0.x} ${p0.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`;
   }
   function layout() {
     frame = 0;
     if (destroyed || !viewport.clientWidth) return;
     const scale = state.zoom;
-    canvas.style.width = `${Math.max(274, viewport.clientWidth / scale)}px`; canvas.style.transform = `scale(${scale})`;
+    canvas.style.width = `${Math.max(274, widest + 66, viewport.clientWidth / scale)}px`; canvas.style.transform = `scale(${scale})`;
     // The scaled spacer, rather than the unscaled canvas, owns scroll extent.
     const width = canvas.offsetWidth, height = rows.offsetHeight + 48;
     canvas.style.height = `${height}px`; spacer.style.width = `${width * scale}px`; spacer.style.height = `${height * scale}px`;
     cables.setAttribute('viewBox', `0 0 ${width} ${height}`); cables.setAttribute('width', width); cables.setAttribute('height', height);
     const origin = canvas.getBoundingClientRect(), positions = new Map();
     for (const [key, ring] of jacks) { const r = ring.getBoundingClientRect(); positions.set(key, { x: (r.left + r.width / 2 - origin.left) / scale, y: (r.top + r.height / 2 - origin.top) / scale }); }
-    cableElements.forEach(({ edge, group, shadow, wire, hit, handles }, index) => {
-      let a = positions.get(jackKey(edge.from.key, 'output', edge.from.port)), b = positions.get(jackKey(edge.to.key, 'input', edge.to.port));
-      if (cablePreview?.edge === edge) {
-        const point = { x: (cablePreview.clientX - origin.left) / scale, y: (cablePreview.clientY - origin.top) / scale };
-        if (cablePreview.end === 'from') a = point; else b = point;
-      }
-      group.style.display = a && b ? '' : 'none';
-      if (!a || !b) return;
-      const sag = 30 + Math.min(100, Math.abs(a.x - b.x) * 0.13) + index % 5 * 5;
-      const d = `M ${a.x} ${a.y} C ${a.x} ${a.y + sag}, ${b.x} ${b.y + sag}, ${b.x} ${b.y}`;
-      shadow.setAttribute('d', d); wire.setAttribute('d', d); hit.setAttribute('d', d);
+    const pointer = cablePreview && { x: (cablePreview.clientX - origin.left) / scale, y: (cablePreview.clientY - origin.top) / scale };
+    const sagFor = (a, b, index) => 30 + Math.min(100, Math.abs(a.x - b.x) * 0.13) + index % 5 * 5;
+    cableElements.forEach((item, index) => {
+      const { edge, group, shadow, wire, hit, handles } = item;
+      let a = positions.get(jackKey(edge.from.key, edge.from.direction, edge.from.port)), b = positions.get(jackKey(edge.to.key, 'input', edge.to.port));
+      if (cablePreview?.edge === edge) { if (cablePreview.end === 'from') a = pointer; else b = pointer; }
+      group.style.display = a && b && (!edge.probeChannel || edge.from.valid) ? '' : 'none';
+      if (group.style.display) return;
+      const sag = sagFor(a, b, index), d = curve(a, b, sag);
+      shadow.setAttribute('d', d); wire.setAttribute('d', d); hit.setAttribute('d', hitCurve(a, b, sag));
       for (const [end, handle] of Object.entries(handles)) { const point = end === 'from' ? a : b; handle.setAttribute('cx', point.x); handle.setAttribute('cy', point.y); }
+      placeLabel(item, a, b, sag, index);
     });
+    if (ghost) {
+      const target = cablePreview?.probeChannel && !cablePreview.edge && positions.get(jackKey(SCOPE, 'input', cablePreview.probeChannel));
+      ghost.group.style.display = target ? '' : 'none';
+      if (target) {
+        const d = curve(pointer, target, sagFor(pointer, target, 0));
+        ghost.group.style.setProperty('--signal', CHANNEL_COLORS[cablePreview.probeChannel]); ghost.shadow.setAttribute('d', d); ghost.wire.setAttribute('d', d);
+      }
+    }
     restoring = true;
     if (!gesture) viewport.scrollLeft = state.scrollLeft;
     restoring = false;
@@ -495,9 +738,9 @@ export function createRackView(root, { onStateChange = () => {}, onReveal = () =
       project = object(next); view = object(view);
       const z = number(view.zoom, 0.8);
       state = { zoom: [0.5, 0.65, 0.8, 1, 1.2, 1.5].includes(z) ? z : 0.8, track: text(view.track), query: text(view.query), selected: text(view.selected), scrollLeft: Math.max(0, number(view.scrollLeft, 0)), scrollTop: Math.max(0, number(view.scrollTop, 0)) };
-      makeModel(); if (!byID.has(state.selected) && state.selected !== OUTPUT) state.selected = ''; render();
+      makeModel(); if (!byID.has(state.selected) && state.selected !== OUTPUT && !(hasScope && state.selected === SCOPE)) state.selected = ''; render();
     },
     refreshLayout,
-    destroy() { destroyed = true; gesture?.cancel(); observer?.disconnect(); observedWindow?.removeEventListener('resize', refreshLayout); cancelFrame(frame); cancelFrame(scrollFrame); disposers.forEach(dispose => dispose()); root.replaceChildren(); root.classList.remove('rack-view'); },
+    destroy() { destroyed = true; gesture?.cancel(); observer?.disconnect(); observedWindow?.removeEventListener('resize', refreshLayout); cancelFrame(frame); cancelFrame(scrollFrame); disposers.forEach(dispose => dispose()); root.replaceChildren(); root.classList.remove('rack-view', 'is-probing'); },
   };
 }

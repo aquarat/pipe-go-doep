@@ -9,8 +9,12 @@ self.onmessage = ({ data }) => {
   try {
     const result = ready ? self.pipeGoDoepStream(data.action, data.json) :
       { status: 503, error: 'Live synth is not ready' };
-    // The bridge returns owned JS PCM, not a view into Go's moving WASM memory.
-    const transfer = result.body instanceof Float32Array ? [result.body.buffer] : [];
+    // The bridge returns owned JS PCM and probe data, not views into Go's moving
+    // WASM memory. Each distinct buffer is transferred once.
+    const transfer = [];
+    for (const value of [result.body, result.probe]) {
+      if (value instanceof Float32Array && !transfer.includes(value.buffer)) transfer.push(value.buffer);
+    }
     self.postMessage({ type: 'result', id: data.id, epoch: data.epoch, ...result }, transfer);
   } catch (error) {
     self.postMessage({ type: 'result', id: data.id, epoch: data.epoch,

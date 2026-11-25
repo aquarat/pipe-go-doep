@@ -14,7 +14,7 @@ function structureOf(project) {
 
 // All public asynchronous methods settle to true (applied) or false (superseded /
 // failed). Errors also go to onError, including fire-and-forget project updates.
-export function createLiveTransport({ onState, onTime, onError } = {}) {
+export function createLiveTransport({ onState, onTime, onError, onProbe } = {}) {
   let context, node, nodePromise, worker, workerPromise, boot, pending;
   let destroyed = false, epoch = 0, reconciled = -1, nextID = 0;
   let json, structure, appliedStructure, projectVersion = 0, appliedVersion = -1, engineOpen = false;
@@ -22,6 +22,9 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
   let sent = 0, consumed = 0, sentBlocks = 0, consumedBlocks = 0, enginePosition = 0, eof = false, primed = false;
   let loop = { enabled: false, start: 0, end: 0 };
   let running = false, requested = false;
+  // Probe list (JSON), latest wins. engineProbes is what the current worker's
+  // engine holds; a fresh worker holds none, so probes are resent after restart.
+  let probes = '[]', engineProbes = '[]';
   const waiters = new Map();
   const state = { playing: false, ready: false, position: 0, duration: 0, buffering: false, underruns: 0 };
   const callback = (fn, value) => { try { fn?.(value); } catch (error) { console.error(error); } };
@@ -60,7 +63,7 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
     worker?.terminate(); worker = undefined; workerPromise = undefined;
     if (boot) { clearTimeout(boot.timer); boot.reject(error); boot = undefined; }
     if (pending) { clearTimeout(pending.timer); pending.reject(error); pending = undefined; }
-    engineOpen = false; appliedVersion = -1; state.ready = false;
+    engineOpen = false; appliedVersion = -1; state.ready = false; engineProbes = '[]';
   }
   function startWorker() {
     if (workerPromise) return workerPromise;
@@ -100,6 +103,21 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
         json: typeof payload === 'string' ? payload : JSON.stringify(payload) }); }
       catch (error) { stopWorker(error); }
     });
+  }
+  // Probe failures are reported but never stop playback. A worker that died
+  // meanwhile is a transport failure and propagates.
+  async function syncProbes(current) {
+    while (engineOpen && probes !== engineProbes && !destroyed) {
+      const list = probes, owner = worker;
+      try {
+        await request('probe', `{"probes":${list}}`, current);
+      } catch (error) {
+        if (worker !== owner || !worker) throw error;
+        if (list === probes) callback(onError, `Oscilloscope probes: ${errorMessage(error)}`);
+      }
+      if (worker === owner) engineProbes = list;
+      if (destroyed || current !== epoch) return;
+    }
   }
   function ensureNode() {
     if (nodePromise) return nodePromise;
@@ -162,6 +180,8 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
         sourceRate = result.sampleRate; totalFrames = result.frames;
         if (destroyed || current !== epoch) return;
       }
+      await syncProbes(current);
+      if (destroyed || current !== epoch) return;
       state.duration = totalFrames / sourceRate; state.ready = true;
       if (loop.enabled && Math.round(loop.end * sourceRate) <= Math.round(loop.start * sourceRate)) {
         throw new Error('Loop must span at least one project sample frame');
@@ -188,10 +208,11 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
       if (destroyed || current !== epoch) return;
       state.duration = totalFrames / sourceRate;
     }
-    if (mode === 'idle' || eof) return;
+    await syncProbes(current);
+    if (destroyed || current !== epoch || mode === 'idle' || eof) return;
     const capacity = Math.ceil(sourceRate * .1);
     while (!destroyed && current === epoch && sent - consumed < capacity && sentBlocks - consumedBlocks < 24 && !eof) {
-      if (appliedVersion !== projectVersion) { requested = true; return; }
+      if (appliedVersion !== projectVersion || probes !== engineProbes) { requested = true; return; }
       const looping = mode === 'play' && loop.enabled && loop.start < state.duration;
       const end = mode === 'grain' ? grainEnd : looping ? Math.min(totalFrames, Math.round(loop.end * sourceRate)) : totalFrames;
       if (enginePosition >= end) {
@@ -213,6 +234,12 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
       }
       enginePosition = result.position + result.frames;
       sent += result.frames; sentBlocks++;
+      if (onProbe && result.probe instanceof Float32Array && Array.isArray(result.channels) &&
+          result.probe.length === result.frames * result.channels.length) {
+        callback(onProbe, { position: result.position, frames: result.frames, sampleRate: sourceRate,
+          channels: result.channels, unresolved: Array.isArray(result.unresolved) ? result.unresolved : [],
+          data: result.probe });
+      }
       node.port.postMessage({ type: 'block', epoch: current, position: result.position,
         fadeOut: enginePosition >= end, body: result.body }, [result.body.buffer]);
     }
@@ -277,6 +304,17 @@ export function createLiveTransport({ onState, onTime, onError } = {}) {
     seek(seconds) { return operation(mode === 'play' ? 'play' : 'idle', seconds); },
     scrub(seconds) { return operation('grain', seconds, true); },
     endScrub(seconds, resume) { return operation(resume ? 'play' : 'idle', seconds, !!resume); },
+    // [{channel, node, port, direction} | {channel, bus}], at most 5; [] clears.
+    setProbes(list) {
+      if (destroyed) return;
+      if (!Array.isArray(list) || list.some(probe => !probe || typeof probe !== 'object')) {
+        callback(onError, 'Oscilloscope probes must be a list of objects'); return;
+      }
+      const next = JSON.stringify(list);
+      if (next === probes) return;
+      probes = next;
+      if (engineOpen && context) kick();
+    },
     setLoop(value) {
       if (destroyed) return;
       let next;

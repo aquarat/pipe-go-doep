@@ -5,6 +5,7 @@
 - [Visual component interfaces](workbench-components.md)
 - [Score visualisation](score-visualisation.md)
 - [Rack visualisation](rack-visualisation.md)
+- [Oscilloscope](scope.md) and its [integration contract](scope-contract.md)
 - [Detachable pane windows](pane-windows.md)
 - [Interactive rack contract](interactive-workbench-contract.md)
 - [Browser Go/WebAssembly renderer](browser-renderer.md)
